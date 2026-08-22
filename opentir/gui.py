@@ -398,7 +398,11 @@ class LensForm(ctk.CTkToplevel):
         self.n_points.set(str(lens_def.get("n_points", 80)))
         fg = lens_def.get("fronte_geom", {})
         self.f_geom.set(fg.get("geom_type", "conic"))
-        self.f_R.set(str(fg.get("R", 0)))
+        f_R_val = fg.get("R", 0)
+        f_flip  = fg.get("flip_z", False)
+        if f_flip and f_R_val > 0:
+            f_R_val = -f_R_val
+        self.f_R.set(str(f_R_val))
         self.f_k.set(str(fg.get("k", 0.0)))
         if fg.get("coeffs"):
             self.f_A4.set(str(fg["coeffs"][0]))
@@ -668,7 +672,7 @@ class ClickableSurfaceItem(ctk.CTkFrame):
                                       font=FONT_SMALL)
         self.edit_btn.pack(side="left", padx=2)
         
-        self.delete_btn = ctk.CTkButton(btn_frame, text="", width=30, height=24,
+        self.delete_btn = ctk.CTkButton(btn_frame, text="🗑", width=30, height=24,
                                         fg_color="#8a2a2a", hover_color="#aa3a3a",
                                         font=FONT_SMALL)
         self.delete_btn.pack(side="left", padx=2)

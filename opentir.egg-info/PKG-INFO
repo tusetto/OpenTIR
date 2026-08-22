@@ -1,3 +1,12 @@
+Metadata-Version: 2.4
+Name: opentir
+Version: 0.1.0
+Summary: Simulatore ottico Python per sistemi di concentrazione del fascio LED (riflettori, lenti TIR)
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: numpy>=1.24
+Requires-Dist: matplotlib>=3.7
+
 # OpenTIR
 
 Simulatore Python open-source per la progettazione di sistemi ottici

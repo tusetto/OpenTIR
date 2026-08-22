@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "opentir"
+version = "0.1.0"
+description = "Simulatore ottico Python per sistemi di concentrazione del fascio LED (riflettori, lenti TIR)"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "numpy>=1.24",
+    "matplotlib>=3.7",
+]
+
+[tool.setuptools.packages.find]
+include = ["opentir*"]

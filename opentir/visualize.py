@@ -58,7 +58,7 @@ def _offset_points(pts, offset):
 
 def plot_system(system, traces=None, ax=None, show_axis=True,
                 symmetric=True, reflected_length=20.0,
-                title="OpenTIR – ray trace"):
+                title="OpenTIR – ray trace", linewidth_power=True):
     """
     Draw the optical system and ray paths.
 
@@ -70,6 +70,9 @@ def plot_system(system, traces=None, ax=None, show_axis=True,
     reflected_length : float
         Length (mm) of Fresnel-reflected ray segments from the bounce
         point. Set to 0 to hide all reflected rays.
+    linewidth_power : bool
+        If True, scale ray linewidth proportionally to their relative power.
+        Base linewidth is 0.8, scaled by (power / max_power).
     """
     if ax is None:
         _, ax = plt.subplots(figsize=(8, 6))
@@ -102,10 +105,21 @@ def plot_system(system, traces=None, ax=None, show_axis=True,
                     color=color, linewidth=2.0, linestyle="--", alpha=0.45)
 
     if traces:
+        # Compute max power for linewidth scaling
+        max_power = max((t.get("power", 1.0) for t in traces), default=1.0)
+        
         for trace in traces:
             is_refl = trace.get("reflected", False)
             color   = trace.get("_color", "orange")
             path    = np.array(trace["path"])
+            power   = trace.get("power", 1.0)
+            
+            # Scale linewidth by relative power if enabled
+            if linewidth_power and max_power > 0:
+                base_lw = 0.8
+                lw = max(0.2, base_lw * (power / max_power))
+            else:
+                lw = 0.8
 
             if is_refl:
                 if reflected_length <= 0:
@@ -127,7 +141,7 @@ def plot_system(system, traces=None, ax=None, show_axis=True,
                         color=color, linewidth=0.35, alpha=0.30, linestyle="--")
             else:
                 ax.plot(path[:, 0], path[:, 1],
-                        color=color, linewidth=0.8, alpha=0.80)
+                        color=color, linewidth=lw, alpha=0.80)
 
     if show_axis:
         ax.axhline(0, color="gray", linestyle="--", linewidth=0.7)

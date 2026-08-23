@@ -1,14 +1,10 @@
 README.md
 pyproject.toml
 opentir/__init__.py
-opentir/chromatic.py
-opentir/export_dxf.py
 opentir/geometry.py
 opentir/gui.py
-opentir/lee.py
 opentir/materials.py
 opentir/optics.py
-opentir/profiles.py
 opentir/sms.py
 opentir/source.py
 opentir/visualize.py
@@ -17,11 +13,6 @@ opentir.egg-info/SOURCES.txt
 opentir.egg-info/dependency_links.txt
 opentir.egg-info/requires.txt
 opentir.egg-info/top_level.txt
-tests/test_chromatic.py
-tests/test_export_dxf.py
-tests/test_fixes_063.py
 tests/test_fresnel.py
 tests/test_geometry.py
-tests/test_profiles.py
 tests/test_sms.py
-tests/test_source_and_lee.py

@@ -708,6 +708,7 @@ class LEDSourcePanel(ctk.CTkToplevel):
         self.src_les_size = tk.StringVar(value="1.25")
         self.src_les_n = tk.StringVar(value="5")
         self.enable_chromatic = tk.BooleanVar(value=False)
+        self.n_wavelengths = tk.StringVar(value="5")
 
         if source_def:
             self._populate(source_def)
@@ -775,6 +776,8 @@ class LEDSourcePanel(ctk.CTkToplevel):
                        variable=self.enable_chromatic, font=FONT_SMALL,
                        checkbox_width=18, checkbox_height=18).grid(
             row=1, column=0, sticky="w", padx=10, pady=6)
+        _lbl(chrom_frame, "N. lunghezze d'onda:", font=FONT_SMALL).grid(row=2, column=0, sticky="e", **pad)
+        _entry(chrom_frame, self.n_wavelengths, width=90).grid(row=2, column=1, sticky="w", **pad)
 
         self._total_rays_lbl = _lbl(self, "Raggi totali: 0", font=FONT_SMALL, text_color="#58a6ff")
         self._total_rays_lbl.pack(pady=(8, 4))
@@ -825,6 +828,7 @@ class LEDSourcePanel(ctk.CTkToplevel):
                 "les_size": float(self.src_les_size.get()) if self.src_les_shape.get() != "point" else 0.0,
                 "les_n": int(self.src_les_n.get()) if self.src_les_shape.get() != "point" else 1,
                 "enable_chromatic": self.enable_chromatic.get(),
+                "n_wavelengths": int(self.n_wavelengths.get()),
             }
             self.on_save(source_def)
             self.destroy()
@@ -843,6 +847,7 @@ class LEDSourcePanel(ctk.CTkToplevel):
         self.src_les_size.set(str(source_def.get("les_size", 1.25)))
         self.src_les_n.set(str(source_def.get("les_n", 5)))
         self.enable_chromatic.set(source_def.get("enable_chromatic", False))
+        self.n_wavelengths.set(str(source_def.get("n_wavelengths", 5)))
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1330,6 +1335,17 @@ class OpenTIRApp(ctk.CTk):
 
             base_rays = source.generate_rays()
             self._last_source = source
+
+            # Chromatic aberration handling
+            if self.enable_chromatic.get():
+                n_wavelengths = int(self.n_wavelengths.get())
+                wavelengths = wavelength_samples(n_wavelengths)
+                chromatic_expanded = chromatic_rays(base_rays, wavelengths)
+                # Assign colors to rays based on wavelength
+                for wl, ray in chromatic_expanded:
+                    rgb = wavelength_to_rgb(wl)
+                    ray._color = rgb  # Store color for visualization
+                base_rays = [ray for _, ray in chromatic_expanded]
 
             max_b = int(self.max_bounces.get())
             min_p = float(self.min_power.get())

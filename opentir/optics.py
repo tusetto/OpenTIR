@@ -183,13 +183,15 @@ class OpticalSystem:
         if depth >= max_bounces or ray.power < min_power:
             endpoint = ray.origin + ray.direction * 1e2
             return [{"path": path + [endpoint], "hits": [], "power": ray.power,
-                     "wavelength_nm": ray.wavelength_nm, "reflected": reflected}]
+                     "wavelength_nm": ray.wavelength_nm, "reflected": reflected,
+                     "_color": getattr(ray, "_color", None)}]
 
         best, surface = self._closest_hit(ray)
         if best is None:
             endpoint = ray.origin + ray.direction * 1e3
             return [{"path": path + [endpoint], "hits": [], "power": ray.power,
-                     "wavelength_nm": ray.wavelength_nm, "reflected": reflected}]
+                     "wavelength_nm": ray.wavelength_nm, "reflected": reflected,
+                     "_color": getattr(ray, "_color", None)}]
 
         t, point, normal = best
         new_path = path + [point]
@@ -198,17 +200,20 @@ class OpticalSystem:
             new_dir = reflect(ray.direction, normal)
             new_ray = Ray(point, new_dir, ray.power, medium=ray.medium,
                            wavelength_nm=ray.wavelength_nm)
+            if hasattr(ray, "_color"):
+                new_ray._color = ray._color
             return self._trace(new_ray, new_path, depth + 1, max_bounces,
                                 min_power, reflected=reflected)
 
         elif surface.kind == "target":
             return [{"path": new_path, "hits": [(surface, point)],
                      "power": ray.power, "wavelength_nm": ray.wavelength_nm,
-                     "reflected": reflected}]
+                     "reflected": reflected, "_color": getattr(ray, "_color", None)}]
 
         elif surface.kind == "block":
             return [{"path": new_path, "hits": [], "power": ray.power,
-                     "wavelength_nm": ray.wavelength_nm, "reflected": reflected}]
+                     "wavelength_nm": ray.wavelength_nm, "reflected": reflected,
+                     "_color": getattr(ray, "_color", None)}]
 
         elif surface.kind == "refract":
             return self._trace_refract(ray, surface, point, normal, new_path,
@@ -216,7 +221,8 @@ class OpticalSystem:
 
         else:
             return [{"path": new_path, "hits": [], "power": ray.power,
-                     "wavelength_nm": ray.wavelength_nm, "reflected": reflected}]
+                     "wavelength_nm": ray.wavelength_nm, "reflected": reflected,
+                     "_color": getattr(ray, "_color", None)}]
 
     def _trace_refract(self, ray, surface, point, normal, new_path,
                         depth, max_bounces, min_power, reflected=False):
@@ -240,6 +246,8 @@ class OpticalSystem:
             refl_dir = reflect(d, n_use)
             refl_ray = Ray(point, refl_dir, ray.power, medium=mat_from,
                             wavelength_nm=ray.wavelength_nm)
+            if hasattr(ray, "_color"):
+                refl_ray._color = ray._color
             branches = self._trace(refl_ray, new_path, depth + 1, max_bounces,
                                     min_power, reflected=False)
         else:
@@ -252,6 +260,8 @@ class OpticalSystem:
                 refl_dir = reflect(d, n_use)
                 refl_ray = Ray(point, refl_dir, refl_power, medium=mat_from,
                                 wavelength_nm=ray.wavelength_nm)
+                if hasattr(ray, "_color"):
+                    refl_ray._color = ray._color
                 # Fresnel partial reflection → mark as reflected=True
                 branches += self._trace(refl_ray, new_path, depth + 1,
                                          max_bounces, min_power, reflected=True)
@@ -259,13 +269,16 @@ class OpticalSystem:
             if trans_power >= min_power and depth + 1 < max_bounces:
                 trans_ray = Ray(point, d_t, trans_power, medium=mat_to,
                                  wavelength_nm=ray.wavelength_nm)
+                if hasattr(ray, "_color"):
+                    trans_ray._color = ray._color
                 # transmitted branch inherits the parent's reflected status
                 branches += self._trace(trans_ray, new_path, depth + 1,
                                          max_bounces, min_power, reflected=reflected)
 
             if not branches:
                 branches = [{"path": new_path, "hits": [], "power": ray.power,
-                             "wavelength_nm": ray.wavelength_nm, "reflected": reflected}]
+                             "wavelength_nm": ray.wavelength_nm, "reflected": reflected,
+                             "_color": getattr(ray, "_color", None)}]
 
         return branches
 

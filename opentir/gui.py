@@ -1015,10 +1015,10 @@ class OpenTIRApp(ctk.CTk):
 
         # Custom toolbar styling to match app theme
         self.toolbar = NavigationToolbar2Tk(self.canvas, center_panel, pack_toolbar=False)
-        self.toolbar.configure(fg_color=BG_CARD, bg=BG_CARD)
+        self.toolbar.configure(bg=BG_CARD)
         for child in self.toolbar.winfo_children():
             if isinstance(child, tk.Frame):
-                child.configure(fg_color=BG_CARD, bg=BG_CARD)
+                child.configure(bg=BG_CARD)
         self.toolbar.update()
         self.toolbar.pack(side="bottom", fill="x")
 

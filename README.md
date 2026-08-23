@@ -8,9 +8,9 @@ di una sorgente LED.
 
 - ✅ **0.1**: CAD 2D assialsimmetrico + ray tracing geometrico (specchi + target).
 - ✅ **0.2**: materiali, rifrazione (Snell), Fresnel, riflessione totale interna (TIR), interfaccia grafica.
-- 🟡 **0.3**: sintesi SMS - ovale cartesiano esatto; marcia a 2 superfici sperimentale. Aggiunta di tutte le famiglie di superfici coniche/asferiche e forma libera.
-- ✅ **0.4** (questa release): aberrazione cromatica + navigazione interattiva (zoom/pan).
-- **1.0**: ottimizzazione automatica, esportazione STEP/DXF, progettazione completa di lenti TIR.
+- 🟡 **0.3** (questa release): sintesi SMS - superficie singola (ovale cartesiano) esatta e verificata; marcia SMS a 2 superfici presente ma **sperimentale** (vedi note sotto).
+- **0.4**: ottimizzazione automatica delle superfici.
+- **1.0**: esportazione STEP/DXF e progettazione completa di lenti TIR.
 
 ## Convenzioni
 
@@ -40,17 +40,6 @@ python examples/example_flat_window_tir.py
 ```bash
 python run_gui.py
 ```
-
-Interfaccia **dark-mode** costruita con **CustomTkinter** (`pip install customtkinter`).
-
-### Packaging come .exe per Windows (senza installare Python)
-
-```bash
-pip install pyinstaller
-pyinstaller --onefile --windowed --name OpenTIR run_gui.py
-```
-
-L'eseguibile `dist/OpenTIR.exe` è distribuibile senza installare Python.
 
 Due schede:
 - **Sistema ottico**: definisci superfici (segmenti o archi, tipo
@@ -144,36 +133,7 @@ dell'effetto "cono di fuga" (escape cone) dovuto alla TIR in una
 finestra piatta — motivo per cui le ottiche LED reali preferiscono
 incapsulamenti a cupola.
 
-## Aberrazione cromatica (release 0.4)
-
-Nella scheda **Simulazione**, attiva il checkbox **"Aberrazione cromatica"** e
-scegli il numero di lunghezze d'onda N (campo "N. colori").
-
-- Ogni raggio base viene duplicato in N copie, una per ciascuna
-  lunghezza d'onda campionata uniformemente tra 380 nm e 720 nm.
-- L'indice di rifrazione di ogni materiale viene calcolato alla
-  lunghezza d'onda specifica del raggio usando un modello di Cauchy
-  calibrato sul numero di Abbe del materiale. I raggi blu vengono
-  piegati di più dei rossi in un materiale dispersivo.
-- I percorsi dei raggi vengono colorati con il colore spettrale
-  corrispondente.
-- Disattiva il checkbox per tornare alla simulazione monocromatica
-  di riferimento (d-line, 589.3 nm).
-
-| Materiale        | n (d-line) | Abbe Vd |
-|------------------|-----------|---------|
-| Aria             | 1.000     | —       |
-| PMMA             | 1.490     | 57.4    |
-| Policarbonato    | 1.585     | 30.0    |
-| BK7              | 1.517     | 64.2    |
-| Vetro soda-lime  | 1.520     | 58.5    |
-
-## Navigazione interattiva nella simulazione (release 0.4)
-
-- **Rotella del mouse** sul grafico → zoom centrato sul cursore (su entrambi i sotto-grafici indipendentemente).
-- **Toolbar matplotlib** (in basso sotto il grafico): zoom-box, pan, tasto home, avanti/indietro nella cronologia delle viste.
-- **Tasto destro** su un sotto-grafico → reset di quel sotto-grafico all'autoscale.
-- **Pulsante "Reset vista"** nella barra dei controlli → riporta entrambi i grafici all'autoscale.
+## Note sulla release 0.3 (sintesi SMS)
 
 **Ovale cartesiano (superficie singola) - affidabile.** `design_cartesian_oval_collimator()`
 calcola in forma chiusa (nessuna iterazione) l'unica superficie

@@ -719,61 +719,71 @@ class LEDSourcePanel(ctk.CTkToplevel):
         pad = {"padx": 10, "pady": 6}
 
         pos_frame = ctk.CTkFrame(self, fg_color=BG_CARD, corner_radius=8)
-        pos_frame.pack(fill="x", padx=10, pady=10)
-        _lbl(pos_frame, "Posizione [mm]", font=FONT_BOLD).grid(row=0, column=0, columnspan=2, sticky="w", **pad)
-        _lbl(pos_frame, "Asse z", font=FONT_SMALL).grid(row=1, column=0, sticky="w", **pad)
-        _entry(pos_frame, self.src_z, width=80).grid(row=1, column=1, **pad)
-        _lbl(pos_frame, "Asse r", font=FONT_SMALL).grid(row=2, column=0, sticky="w", **pad)
-        _entry(pos_frame, self.src_r, width=80).grid(row=2, column=1, **pad)
+        pos_frame.pack(fill="x", padx=10, pady=(10, 6))
+        _lbl(pos_frame, "Posizione sorgente [mm]", font=FONT_BOLD).grid(
+            row=0, column=0, columnspan=3, sticky="w", padx=10, pady=(10, 6))
+        _lbl(pos_frame, "Asse z:", font=FONT_SMALL).grid(row=1, column=0, sticky="e", **pad)
+        _entry(pos_frame, self.src_z, width=90).grid(row=1, column=1, sticky="w", **pad)
+        _lbl(pos_frame, "Asse r:", font=FONT_SMALL).grid(row=2, column=0, sticky="e", **pad)
+        _entry(pos_frame, self.src_r, width=90).grid(row=2, column=1, sticky="w", **pad)
 
         ang_frame = ctk.CTkFrame(self, fg_color=BG_CARD, corner_radius=8)
-        ang_frame.pack(fill="x", padx=10, pady=8)
-        _lbl(ang_frame, "Angoli [°]", font=FONT_BOLD).grid(row=0, column=0, columnspan=2, sticky="w", **pad)
-        _lbl(ang_frame, "Asse emissione", font=FONT_SMALL).grid(row=1, column=0, sticky="w", **pad)
-        _entry(ang_frame, self.src_axis, width=80).grid(row=1, column=1, **pad)
-        _lbl(ang_frame, "Semi-angolo", font=FONT_SMALL).grid(row=2, column=0, sticky="w", **pad)
-        _entry(ang_frame, self.src_half_angle, width=80).grid(row=2, column=1, **pad)
+        ang_frame.pack(fill="x", padx=10, pady=6)
+        _lbl(ang_frame, "Angoli di emissione [°]", font=FONT_BOLD).grid(
+            row=0, column=0, columnspan=3, sticky="w", padx=10, pady=(10, 6))
+        _lbl(ang_frame, "Asse:", font=FONT_SMALL).grid(row=1, column=0, sticky="e", **pad)
+        _entry(ang_frame, self.src_axis, width=90).grid(row=1, column=1, sticky="w", **pad)
+        _lbl(ang_frame, "Semi-angolo:", font=FONT_SMALL).grid(row=2, column=0, sticky="e", **pad)
+        _entry(ang_frame, self.src_half_angle, width=90).grid(row=2, column=1, sticky="w", **pad)
 
         rays_frame = ctk.CTkFrame(self, fg_color=BG_CARD, corner_radius=8)
-        rays_frame.pack(fill="x", padx=10, pady=8)
-        _lbl(rays_frame, "Raggi", font=FONT_BOLD).grid(row=0, column=0, columnspan=2, sticky="w", **pad)
-        _lbl(rays_frame, "N. raggi angolari", font=FONT_SMALL).grid(row=1, column=0, sticky="w", **pad)
-        _entry(rays_frame, self.src_n_rays, width=80).grid(row=1, column=1, **pad)
-        _lbl(rays_frame, "Distribuzione", font=FONT_SMALL).grid(row=2, column=0, sticky="w", **pad)
-        _combo(rays_frame, self.src_distribution, DISTRIBUTIONS, width=80).grid(row=2, column=1, **pad)
+        rays_frame.pack(fill="x", padx=10, pady=6)
+        _lbl(rays_frame, "Configurazione raggi", font=FONT_BOLD).grid(
+            row=0, column=0, columnspan=3, sticky="w", padx=10, pady=(10, 6))
+        _lbl(rays_frame, "N. raggi angolari:", font=FONT_SMALL).grid(row=1, column=0, sticky="e", **pad)
+        _entry(rays_frame, self.src_n_rays, width=90).grid(row=1, column=1, sticky="w", **pad)
+        _lbl(rays_frame, "Distribuzione:", font=FONT_SMALL).grid(row=2, column=0, sticky="e", **pad)
+        _combo(rays_frame, self.src_distribution, DISTRIBUTIONS, width=140).grid(
+            row=2, column=1, sticky="w", **pad)
 
         med_frame = ctk.CTkFrame(self, fg_color=BG_CARD, corner_radius=8)
-        med_frame.pack(fill="x", padx=10, pady=8)
-        _lbl(med_frame, "Mezzo emissione", font=FONT_BOLD).grid(row=0, column=0, sticky="w", **pad)
+        med_frame.pack(fill="x", padx=10, pady=6)
+        _lbl(med_frame, "Mezzo di emissione", font=FONT_BOLD).grid(
+            row=0, column=0, sticky="w", padx=10, pady=(10, 6))
         mat_names = [k for k in MATERIAL_PRESETS if k != "Personalizzato..."]
-        _combo(med_frame, self.src_medium, mat_names, width=180).grid(row=1, column=0, **pad)
+        _combo(med_frame, self.src_medium, mat_names, width=220).grid(
+            row=1, column=0, sticky="w", padx=10, pady=6)
 
         les_frame = ctk.CTkFrame(self, fg_color=BG_CARD, corner_radius=8)
-        les_frame.pack(fill="x", padx=10, pady=8)
-        _lbl(les_frame, "LES (Light Emitting Surface)", font=FONT_BOLD).grid(row=0, column=0, sticky="w", **pad)
-        _lbl(les_frame, "Forma LES", font=FONT_SMALL).grid(row=1, column=0, sticky="w", **pad)
-        _combo(les_frame, self.src_les_shape, ["point", "square", "circle"], width=180,
-               command=lambda v: self._on_les_change()).grid(row=1, column=0, **pad)
+        les_frame.pack(fill="x", padx=10, pady=6)
+        _lbl(les_frame, "LES (Light Emitting Surface)", font=FONT_BOLD).grid(
+            row=0, column=0, sticky="w", padx=10, pady=(10, 6))
+        _lbl(les_frame, "Forma LES:", font=FONT_SMALL).grid(row=1, column=0, sticky="w", **pad)
+        _combo(les_frame, self.src_les_shape, ["point", "square", "circle"], width=140,
+               command=lambda v: self._on_les_change()).grid(row=1, column=1, sticky="w", **pad)
 
-        self._les_size_lbl = _lbl(les_frame, "Dimensione [mm]", font=FONT_SMALL)
-        self._les_size_entry = _entry(les_frame, self.src_les_size, width=80)
-        self._les_n_lbl = _lbl(les_frame, "N. sotto-sorgenti", font=FONT_SMALL)
-        self._les_n_entry = _entry(les_frame, self.src_les_n, width=80)
+        self._les_size_lbl = _lbl(les_frame, "Dimensione [mm]:", font=FONT_SMALL)
+        self._les_size_entry = _entry(les_frame, self.src_les_size, width=90)
+        self._les_n_lbl = _lbl(les_frame, "N. sotto-sorgenti:", font=FONT_SMALL)
+        self._les_n_entry = _entry(les_frame, self.src_les_n, width=90)
 
         chrom_frame = ctk.CTkFrame(self, fg_color=BG_CARD, corner_radius=8)
-        chrom_frame.pack(fill="x", padx=10, pady=8)
-        _lbl(chrom_frame, "Aberrazione cromatica", font=FONT_BOLD).grid(row=0, column=0, sticky="w", **pad)
+        chrom_frame.pack(fill="x", padx=10, pady=6)
+        _lbl(chrom_frame, "Aberrazione cromatica", font=FONT_BOLD).grid(
+            row=0, column=0, sticky="w", padx=10, pady=(10, 6))
         ctk.CTkCheckBox(chrom_frame, text="Simula dispersione cromatica",
-                       variable=self.enable_chromatic, font=FONT_SMALL).grid(row=1, column=0, sticky="w", **pad)
+                       variable=self.enable_chromatic, font=FONT_SMALL,
+                       checkbox_width=18, checkbox_height=18).grid(
+            row=1, column=0, sticky="w", padx=10, pady=6)
 
         self._total_rays_lbl = _lbl(self, "Raggi totali: 0", font=FONT_SMALL, text_color="#58a6ff")
-        self._total_rays_lbl.pack(pady=8)
+        self._total_rays_lbl.pack(pady=(8, 4))
 
         btn_frame = ctk.CTkFrame(self, fg_color="transparent")
-        btn_frame.pack(fill="x", padx=10, pady=10)
-        _btn(btn_frame, "✓  Applica", self._apply, width=120).pack(side="left", padx=5)
-        _btn(btn_frame, "✕  Annulla", self.destroy, width=120,
-             fg_color="gray30", hover_color="gray40").pack(side="left", padx=5)
+        btn_frame.pack(fill="x", padx=10, pady=(4, 10))
+        _btn(btn_frame, "✓  Applica", self._apply, width=130).pack(side="left", padx=8)
+        _btn(btn_frame, "✕  Annulla", self.destroy, width=130,
+             fg_color="gray30", hover_color="gray40").pack(side="left", padx=4)
 
     def _on_les_change(self):
         shape = self.src_les_shape.get()
@@ -783,10 +793,10 @@ class LEDSourcePanel(ctk.CTkToplevel):
             self._les_n_lbl.grid_remove()
             self._les_n_entry.grid_remove()
         else:
-            self._les_size_lbl.grid(row=2, column=0, sticky="w", padx=10, pady=6)
-            self._les_size_entry.grid(row=2, column=0, padx=10, pady=6)
-            self._les_n_lbl.grid(row=3, column=0, sticky="w", padx=10, pady=6)
-            self._les_n_entry.grid(row=3, column=0, padx=10, pady=6)
+            self._les_size_lbl.grid(row=2, column=0, sticky="e", padx=10, pady=6)
+            self._les_size_entry.grid(row=2, column=1, sticky="w", padx=10, pady=6)
+            self._les_n_lbl.grid(row=3, column=0, sticky="e", padx=10, pady=6)
+            self._les_n_entry.grid(row=3, column=1, sticky="w", padx=10, pady=6)
         self._update_total_rays()
 
     def _update_total_rays(self):
@@ -1003,7 +1013,12 @@ class OpenTIRApp(ctk.CTk):
         self.canvas = FigureCanvasTkAgg(self.figure, master=center_panel)
         self.canvas.get_tk_widget().pack(fill="both", expand=True, padx=8, pady=8)
 
+        # Custom toolbar styling to match app theme
         self.toolbar = NavigationToolbar2Tk(self.canvas, center_panel, pack_toolbar=False)
+        self.toolbar.configure(fg_color=BG_CARD, bg=BG_CARD)
+        for child in self.toolbar.winfo_children():
+            if isinstance(child, tk.Frame):
+                child.configure(fg_color=BG_CARD, bg=BG_CARD)
         self.toolbar.update()
         self.toolbar.pack(side="bottom", fill="x")
 
@@ -1527,7 +1542,13 @@ class OpenTIRApp(ctk.CTk):
 
         canvas_iso = FigureCanvasTkAgg(fig_iso, master=win)
         canvas_iso.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
-        NavigationToolbar2Tk(canvas_iso, win, pack_toolbar=False).pack(side="bottom", fill="x", padx=10)
+        toolbar_iso = NavigationToolbar2Tk(canvas_iso, win, pack_toolbar=False)
+        toolbar_iso.configure(fg_color=BG_CARD, bg=BG_CARD)
+        for child in toolbar_iso.winfo_children():
+            if isinstance(child, tk.Frame):
+                child.configure(fg_color=BG_CARD, bg=BG_CARD)
+        toolbar_iso.update()
+        toolbar_iso.pack(side="bottom", fill="x", padx=10)
 
     def _show_lee(self):
         if not self._last_traces or self._last_lee is None:
@@ -1550,7 +1571,13 @@ class OpenTIRApp(ctk.CTk):
 
         canvas_lee = FigureCanvasTkAgg(fig_lee, master=win)
         canvas_lee.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
-        NavigationToolbar2Tk(canvas_lee, win, pack_toolbar=False).pack(side="bottom", fill="x", padx=10)
+        toolbar_lee = NavigationToolbar2Tk(canvas_lee, win, pack_toolbar=False)
+        toolbar_lee.configure(fg_color=BG_CARD, bg=BG_CARD)
+        for child in toolbar_lee.winfo_children():
+            if isinstance(child, tk.Frame):
+                child.configure(fg_color=BG_CARD, bg=BG_CARD)
+        toolbar_lee.update()
+        toolbar_lee.pack(side="bottom", fill="x", padx=10)
 
     # ── Project management ─────────────────────────────────────────────────────
     def _save_project(self):

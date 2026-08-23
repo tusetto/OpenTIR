@@ -692,7 +692,7 @@ class LEDSourcePanel(ctk.CTkToplevel):
     def __init__(self, master, on_save, source_def=None):
         super().__init__(master)
         self.title("Sorgente LED")
-        self.geometry("380x620")
+        self.geometry("420x720")
         self.resizable(True, True)
         self.grab_set()
         self.on_save = on_save

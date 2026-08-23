@@ -626,8 +626,6 @@ class ClickableSurfaceItem(ctk.CTkFrame):
         self.bind("<Button-1>", lambda e: self._handle_click())
         self.label.bind("<Button-1>", lambda e: self._handle_click())
         self.detail_label.bind("<Button-1>", lambda e: self._handle_click())
-        self.delete_btn.bind("<Button-1>", lambda e: self._handle_delete(e))
-        self.edit_btn.bind("<Button-1>", lambda e: self._handle_edit(e))
     
     def _build_ui(self):
         # Main content

@@ -1085,16 +1085,7 @@ class OpenTIRApp(ctk.CTk):
         self.canvas_iso = FigureCanvasTkAgg(self.fig_iso, master=tab_dist)
         self.canvas_iso.get_tk_widget().pack(fill="both", expand=True, padx=4, pady=4)
         
-        # Tab 3: Isofote Preview
-        tab_iso_preview = self.analysis_tabs.add("Isofote Preview")
-        self.fig_iso_preview = Figure(facecolor="#1e1e1e", dpi=80, figsize=(4, 3))
-        self.ax_iso_preview = self.fig_iso_preview.add_subplot(1, 1, 1)
-        self._style_ax(self.ax_iso_preview)
-        self.ax_iso_preview.set_title("Isofote preview")
-        self.canvas_iso_preview = FigureCanvasTkAgg(self.fig_iso_preview, master=tab_iso_preview)
-        self.canvas_iso_preview.get_tk_widget().pack(fill="both", expand=True, padx=4, pady=4)
-        
-        # Tab 4: Isofote Detail
+        # Tab 3: Isofote Detail
         tab_iso_detail = self.analysis_tabs.add("Isofote")
         self.fig_iso_detail = Figure(facecolor="#1e1e1e", dpi=80, figsize=(4, 3))
         self.ax_iso_detail = self.fig_iso_detail.add_subplot(1, 1, 1)
@@ -1432,11 +1423,6 @@ class OpenTIRApp(ctk.CTk):
 
         plot_lee_pie(self._last_lee, ax=self.ax_lee, dark=True)
 
-        # Isofote preview
-        self.ax_iso_preview.clear()
-        self._style_ax(self.ax_iso_preview)
-        self.ax_iso_preview.set_title("Isofote preview")
-        
         # Isofote detail tab
         self.ax_iso_detail.clear()
         self._style_ax(self.ax_iso_detail)
@@ -1471,14 +1457,7 @@ class OpenTIRApp(ctk.CTk):
                 XX, YY = np.meshgrid(xc, yc)
                 ZZ = gaussian_filter(H.T, sigma=1.5)
 
-                cf = self.ax_iso_preview.contourf(XX, YY, ZZ, levels=12, cmap="inferno")
-                cs = self.ax_iso_preview.contour(XX, YY, ZZ, levels=12, colors="white", linewidths=0.5, alpha=0.6)
-                self.ax_iso_preview.clabel(cs, inline=True, fontsize=7, fmt=lambda v: f"{v:.2e}", colors="white")
-                self.ax_iso_preview.set_xlabel("x [mm]", color="white")
-                self.ax_iso_preview.set_ylabel("y [mm]", color="white")
-                self.ax_iso_preview.set_aspect("equal")
-                
-                # Same plot for detail tab but with higher resolution
+                # Isofote detail with high resolution
                 cf2 = self.ax_iso_detail.contourf(XX, YY, ZZ, levels=20, cmap="inferno")
                 cs2 = self.ax_iso_detail.contour(XX, YY, ZZ, levels=12, colors="white", linewidths=0.5, alpha=0.6)
                 self.ax_iso_detail.clabel(cs2, inline=True, fontsize=8, fmt=lambda v: f"{v:.2e}", colors="white")
@@ -1497,8 +1476,6 @@ class OpenTIRApp(ctk.CTk):
         self.canvas_iso_detail.draw_idle()
         self.fig_lee.tight_layout()
         self.canvas_lee.draw_idle()
-        self.fig_iso_preview.tight_layout()
-        self.canvas_iso_preview.draw_idle()
 
     def _draw_lens_fills(self, ax):
         if not hasattr(self, "_lens_fill_data"):
@@ -1761,7 +1738,6 @@ class OpenTIRApp(ctk.CTk):
                 for fig, title in [
                     (self.fig_illum, "Illuminamento"),
                     (self.fig_iso, "Distribuzione"),
-                    (self.fig_iso_preview, "Isofote Preview"),
                     (self.fig_iso_detail, "Isofote"),
                     (self.fig_lee, "LEE Breakdown")
                 ]:

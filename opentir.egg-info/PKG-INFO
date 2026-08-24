@@ -17,9 +17,9 @@ di una sorgente LED.
 
 - ✅ **0.1**: CAD 2D assialsimmetrico + ray tracing geometrico (specchi + target).
 - ✅ **0.2**: materiali, rifrazione (Snell), Fresnel, riflessione totale interna (TIR), interfaccia grafica.
-- 🟡 **0.3** (questa release): sintesi SMS - superficie singola (ovale cartesiano) esatta e verificata; marcia SMS a 2 superfici presente ma **sperimentale** (vedi note sotto).
-- **0.4**: ottimizzazione automatica delle superfici.
-- **1.0**: esportazione STEP/DXF e progettazione completa di lenti TIR.
+- 🟡 **0.3**: sintesi SMS - ovale cartesiano esatto; marcia a 2 superfici sperimentale. Aggiunta di tutte le famiglie di superfici coniche/asferiche e forma libera.
+- ✅ **0.4** (questa release): aberrazione cromatica + navigazione interattiva (zoom/pan).
+- **1.0**: ottimizzazione automatica, esportazione STEP/DXF, progettazione completa di lenti TIR.
 
 ## Convenzioni
 
@@ -50,6 +50,17 @@ python examples/example_flat_window_tir.py
 python run_gui.py
 ```
 
+Interfaccia **dark-mode** costruita con **CustomTkinter** (`pip install customtkinter`).
+
+### Packaging come .exe per Windows (senza installare Python)
+
+```bash
+pip install pyinstaller
+pyinstaller --onefile --windowed --name OpenTIR run_gui.py
+```
+
+L'eseguibile `dist/OpenTIR.exe` è distribuibile senza installare Python.
+
 Due schede:
 - **Sistema ottico**: definisci superfici (segmenti o archi, tipo
   mirror/target/block/refract, con materiali per le superfici
@@ -70,6 +81,8 @@ opentir/
   geometry.py    # Segment, Arc, Profile (primitive 2D)
   materials.py   # Material, indici di rifrazione (PMMA, PC, vetro...)
   optics.py      # Ray, Surface, OpticalSystem, Snell/Fresnel/TIR
+  profiles.py    # sfera/parabola/iperbole/ellisse/asferica + forma libera
+  sms.py         # sintesi SMS (ovale cartesiano esatto + marcia sperimentale)
   source.py      # LEDSource (sorgente con distribuzione angolare)
   visualize.py   # plotting matplotlib
   gui.py         # interfaccia grafica Tkinter
@@ -77,6 +90,41 @@ run_gui.py       # avvio rapido della GUI
 examples/        # script dimostrativi
 tests/           # unit test (pytest)
 ```
+
+## Forme di lenti supportate (opentir.profiles)
+
+Qualunque superficie ottica assialsimmetrica classica si ottiene da
+un'unica equazione (sag conica + asferica):
+
+```
+z(r) = c*r^2 / (1 + sqrt(1 - (1+k)*c^2*r^2)) + A4*r^4 + A6*r^6 + ...
+c = 1/R
+```
+
+- `k = 0` → **sfera**
+- `k = -1` → **parabola**
+- `k < -1` → **iperbole**
+- `-1 < k < 0` oppure `k > 0` → **ellisse**
+- coefficienti `A4, A6, ...` → correzione **asferica** generale su una qualsiasi delle coniche sopra
+- `build_freeform_profile()` → superficie a **forma libera** da punti arbitrari, per profili non descrivibili da nessuna formula
+
+Uso via libreria:
+```python
+from opentir import build_conic_profile, profile_to_surfaces, PMMA, AIR
+
+points = build_conic_profile(vertex=[0, 0], R=15.0, k=-2.5, r_max=8.0)
+surfaces = profile_to_surfaces(points, kind="refract",
+                                material_in=PMMA, material_out=AIR)
+```
+
+Uso via GUI: nel form "Definizione superficie", scegli geometria
+`conic` (con menu a tendina per i preset sfera/parabola/iperbole/
+ellisse, più campi R, k, A4, A6) oppure `freeform` (incolla punti
+`z,r` uno per riga). Vedi `examples/example_conic_shapes.py` per un
+confronto visivo delle 4 famiglie a parità di R e apertura, verificato
+anche fisicamente in `tests/test_profiles.py` (uno specchio parabolico
+costruito con questa API collima correttamente i raggi dal fuoco,
+errore <0.5°).
 
 ## Test
 
@@ -105,7 +153,36 @@ dell'effetto "cono di fuga" (escape cone) dovuto alla TIR in una
 finestra piatta — motivo per cui le ottiche LED reali preferiscono
 incapsulamenti a cupola.
 
-## Note sulla release 0.3 (sintesi SMS)
+## Aberrazione cromatica (release 0.4)
+
+Nella scheda **Simulazione**, attiva il checkbox **"Aberrazione cromatica"** e
+scegli il numero di lunghezze d'onda N (campo "N. colori").
+
+- Ogni raggio base viene duplicato in N copie, una per ciascuna
+  lunghezza d'onda campionata uniformemente tra 380 nm e 720 nm.
+- L'indice di rifrazione di ogni materiale viene calcolato alla
+  lunghezza d'onda specifica del raggio usando un modello di Cauchy
+  calibrato sul numero di Abbe del materiale. I raggi blu vengono
+  piegati di più dei rossi in un materiale dispersivo.
+- I percorsi dei raggi vengono colorati con il colore spettrale
+  corrispondente.
+- Disattiva il checkbox per tornare alla simulazione monocromatica
+  di riferimento (d-line, 589.3 nm).
+
+| Materiale        | n (d-line) | Abbe Vd |
+|------------------|-----------|---------|
+| Aria             | 1.000     | —       |
+| PMMA             | 1.490     | 57.4    |
+| Policarbonato    | 1.585     | 30.0    |
+| BK7              | 1.517     | 64.2    |
+| Vetro soda-lime  | 1.520     | 58.5    |
+
+## Navigazione interattiva nella simulazione (release 0.4)
+
+- **Rotella del mouse** sul grafico → zoom centrato sul cursore (su entrambi i sotto-grafici indipendentemente).
+- **Toolbar matplotlib** (in basso sotto il grafico): zoom-box, pan, tasto home, avanti/indietro nella cronologia delle viste.
+- **Tasto destro** su un sotto-grafico → reset di quel sotto-grafico all'autoscale.
+- **Pulsante "Reset vista"** nella barra dei controlli → riporta entrambi i grafici all'autoscale.
 
 **Ovale cartesiano (superficie singola) - affidabile.** `design_cartesian_oval_collimator()`
 calcola in forma chiusa (nessuna iterazione) l'unica superficie

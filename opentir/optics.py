@@ -10,11 +10,22 @@ Release 0.2: adds refractive materials, Snell's law, Fresnel
              hitting a 'refract' surface splits into a reflected and
              a transmitted branch, weighted by the Fresnel
              reflectance, unless TIR occurs (100% reflected).
+Chromatic aberration: each Ray carries a `wavelength_nm` (defaulting
+             to the 589.3 nm reference "d-line", at which every
+             Material's `.n` is calibrated exactly). Refraction always
+             looks up each material's index at the ray's own
+             wavelength via `Material.n_at()`, so a dispersive
+             material (one with an Abbe number set) naturally bends
+             different wavelengths differently - see opentir.chromatic
+             for splitting a beam into multiple wavelengths and for
+             wavelength -> RGB color mapping.
 """
 
 import numpy as np
 
 from .materials import AIR
+
+REFERENCE_WAVELENGTH_NM = 589.3  # helium d-line; matches Material.n exactly
 
 # ---------------------------------------------------------------------
 # Ray
@@ -22,12 +33,14 @@ from .materials import AIR
 
 
 class Ray:
-    def __init__(self, origin, direction, power=1.0, medium=None):
+    def __init__(self, origin, direction, power=1.0, medium=None,
+                 wavelength_nm=REFERENCE_WAVELENGTH_NM):
         self.origin = np.array(origin, dtype=float)
         d = np.array(direction, dtype=float)
         self.direction = d / np.linalg.norm(d)
         self.power = power
         self.medium = medium if medium is not None else AIR
+        self.wavelength_nm = wavelength_nm
 
 
 # ---------------------------------------------------------------------
@@ -94,7 +107,9 @@ class Surface:
     kind     : 'mirror'  -> specular reflection
                'target'  -> ray absorbed here, hit point recorded
                'block'   -> ray absorbed, no data recorded (opaque baffle)
-               'refract' -> Snell/Fresnel refraction + TIR (release 0.2)
+               'refract' -> Snell/Fresnel refraction + TIR (release 0.2),
+                            with per-wavelength dispersion if the
+                            material has an Abbe number set
 
     For kind='refract', the surface geometry's normal is used as the
     reference orientation:
@@ -127,26 +142,9 @@ class OpticalSystem:
         self.surfaces.append(surface)
         return self
 
-    AXIS = "__axis__"  # sentinel marking a hit on the r=0 symmetry axis
-
-    def _axis_intersect(self, ray, t_min=1e-9):
-        """
-        The r=0 line is the optical/symmetry axis of the axisymmetric
-        profile. A ray crossing it does NOT leave the physical system:
-        in the revolved 3D solid it simply continues into the mirrored
-        azimuthal half-plane, which in the 2D (z, r) section looks like
-        the r-component of its direction flipping sign at r=0.
-        """
-        dz, dr = ray.direction
-        if abs(dr) < 1e-12:
-            return None  # travelling parallel to the axis, never crosses it
-        t = -ray.origin[1] / dr
-        if t <= t_min:
-            return None
-        point = np.array([ray.origin[0] + t * dz, 0.0])
-        return t, point, None
-
     def _closest_hit(self, ray):
+        """Find the closest surface intersection ahead of the ray.
+        No axis fold: rays cross r=0 freely (2D plane geometry)."""
         best = None
         best_surface = None
         for surf in self.surfaces:
@@ -157,102 +155,117 @@ class OpticalSystem:
             if best is None or t < best[0]:
                 best = (t, point, normal)
                 best_surface = surf
-
-        axis_hit = self._axis_intersect(ray)
-        if axis_hit is not None and (best is None or axis_hit[0] < best[0]):
-            best = axis_hit
-            best_surface = self.AXIS
-
         return best, best_surface
 
     def trace_ray(self, ray, max_bounces=20, min_power=1e-3):
         """
-        Trace a single ray through the system. Because refractive
-        surfaces split a ray into reflected + transmitted branches,
-        this returns a LIST of trace dicts (one per terminated branch),
-        each with:
-          'path'  : list of points [origin, hit1, hit2, ...]
-          'hits'  : list of (surface, point) recorded on 'target' surfaces
-          'power' : power carried by that branch when it terminated
-        """
-        return self._trace(ray, [ray.origin.copy()], 0, max_bounces, min_power)
+        Trace a single ray through the system. Returns a LIST of trace
+        dicts, one per terminated branch, each with:
+          'path'          : list of [z, r] points along the branch
+          'hits'          : list of (surface, point) on 'target' surfaces
+          'power'         : final power of this branch
+          'wavelength_nm' : wavelength carried by this branch
+          'reflected'     : True if this branch is a Fresnel partial
+                            reflection; False for transmitted / mirror /
+                            TIR branches.
 
-    def _trace(self, ray, path, depth, max_bounces, min_power):
+        Geometry note: the system uses a 2D plane model. Surfaces are
+        defined for r >= 0 (upper half), but rays are free to cross
+        r = 0 and continue into r < 0 without any artificial fold.
+        For a rotationally-symmetric optic, define surfaces on both
+        sides of the axis (r > 0 and r < 0 segments) or use the
+        source positioned at r != 0 for off-axis simulation.
+        """
+        return self._trace(ray, [ray.origin.copy()], 0, max_bounces,
+                           min_power, reflected=False)
+
+    def _trace(self, ray, path, depth, max_bounces, min_power, reflected=False):
         if depth >= max_bounces or ray.power < min_power:
             endpoint = ray.origin + ray.direction * 1e2
-            return [{"path": path + [endpoint], "hits": [], "power": ray.power}]
+            return [{"path": path + [endpoint], "hits": [], "power": ray.power,
+                     "wavelength_nm": ray.wavelength_nm, "reflected": reflected}]
 
         best, surface = self._closest_hit(ray)
         if best is None:
             endpoint = ray.origin + ray.direction * 1e3
-            return [{"path": path + [endpoint], "hits": [], "power": ray.power}]
+            return [{"path": path + [endpoint], "hits": [], "power": ray.power,
+                     "wavelength_nm": ray.wavelength_nm, "reflected": reflected}]
 
         t, point, normal = best
         new_path = path + [point]
 
-        if surface == self.AXIS:
-            folded_dir = ray.direction.copy()
-            folded_dir[1] = -folded_dir[1]
-            folded_ray = Ray(point, folded_dir, ray.power, medium=ray.medium)
-            return self._trace(folded_ray, new_path, depth + 1, max_bounces, min_power)
-
         if surface.kind == "mirror":
             new_dir = reflect(ray.direction, normal)
-            new_ray = Ray(point, new_dir, ray.power, medium=ray.medium)
-            return self._trace(new_ray, new_path, depth + 1, max_bounces, min_power)
+            new_ray = Ray(point, new_dir, ray.power, medium=ray.medium,
+                           wavelength_nm=ray.wavelength_nm)
+            return self._trace(new_ray, new_path, depth + 1, max_bounces,
+                                min_power, reflected=reflected)
 
         elif surface.kind == "target":
-            return [{"path": new_path, "hits": [(surface, point)], "power": ray.power}]
+            return [{"path": new_path, "hits": [(surface, point)],
+                     "power": ray.power, "wavelength_nm": ray.wavelength_nm,
+                     "reflected": reflected}]
 
         elif surface.kind == "block":
-            return [{"path": new_path, "hits": [], "power": ray.power}]
+            return [{"path": new_path, "hits": [], "power": ray.power,
+                     "wavelength_nm": ray.wavelength_nm, "reflected": reflected}]
 
         elif surface.kind == "refract":
             return self._trace_refract(ray, surface, point, normal, new_path,
-                                        depth, max_bounces, min_power)
+                                        depth, max_bounces, min_power, reflected)
 
         else:
-            return [{"path": new_path, "hits": [], "power": ray.power}]
+            return [{"path": new_path, "hits": [], "power": ray.power,
+                     "wavelength_nm": ray.wavelength_nm, "reflected": reflected}]
 
     def _trace_refract(self, ray, surface, point, normal, new_path,
-                        depth, max_bounces, min_power):
+                        depth, max_bounces, min_power, reflected=False):
         d = ray.direction
         cos_i_raw = -np.dot(d, normal)
         if cos_i_raw >= 0:
-            # ray travels opposite to the stored normal -> entering
-            # from the 'material_out' side into 'material_in'
             mat_from, mat_to = surface.material_out, surface.material_in
             n_use = normal
         else:
             mat_from, mat_to = surface.material_in, surface.material_out
             n_use = -normal
 
-        result = snell_refract(d, n_use, mat_from.n, mat_to.n)
+        n_from = mat_from.n_at(ray.wavelength_nm)
+        n_to   = mat_to.n_at(ray.wavelength_nm)
+
+        result = snell_refract(d, n_use, n_from, n_to)
 
         branches = []
         if result is None:
-            # Total internal reflection: 100% of the power is reflected
+            # TIR: 100% reflected — keep 'reflected=False' (it IS the main beam)
             refl_dir = reflect(d, n_use)
-            refl_ray = Ray(point, refl_dir, ray.power, medium=mat_from)
-            branches = self._trace(refl_ray, new_path, depth + 1, max_bounces, min_power)
+            refl_ray = Ray(point, refl_dir, ray.power, medium=mat_from,
+                            wavelength_nm=ray.wavelength_nm)
+            branches = self._trace(refl_ray, new_path, depth + 1, max_bounces,
+                                    min_power, reflected=False)
         else:
             d_t, cos_i, cos_t = result
-            R = fresnel_reflectance(cos_i, cos_t, mat_from.n, mat_to.n)
-            refl_power = ray.power * R
+            R = fresnel_reflectance(cos_i, cos_t, n_from, n_to)
+            refl_power  = ray.power * R
             trans_power = ray.power * (1.0 - R)
 
             if refl_power >= min_power and depth + 1 < max_bounces:
                 refl_dir = reflect(d, n_use)
-                refl_ray = Ray(point, refl_dir, refl_power, medium=mat_from)
-                branches += self._trace(refl_ray, new_path, depth + 1, max_bounces, min_power)
+                refl_ray = Ray(point, refl_dir, refl_power, medium=mat_from,
+                                wavelength_nm=ray.wavelength_nm)
+                # Fresnel partial reflection → mark as reflected=True
+                branches += self._trace(refl_ray, new_path, depth + 1,
+                                         max_bounces, min_power, reflected=True)
 
             if trans_power >= min_power and depth + 1 < max_bounces:
-                trans_ray = Ray(point, d_t, trans_power, medium=mat_to)
-                branches += self._trace(trans_ray, new_path, depth + 1, max_bounces, min_power)
+                trans_ray = Ray(point, d_t, trans_power, medium=mat_to,
+                                 wavelength_nm=ray.wavelength_nm)
+                # transmitted branch inherits the parent's reflected status
+                branches += self._trace(trans_ray, new_path, depth + 1,
+                                         max_bounces, min_power, reflected=reflected)
 
             if not branches:
-                # both branches below threshold: stop here, keep the point
-                branches = [{"path": new_path, "hits": [], "power": ray.power}]
+                branches = [{"path": new_path, "hits": [], "power": ray.power,
+                             "wavelength_nm": ray.wavelength_nm, "reflected": reflected}]
 
         return branches
 

@@ -1393,9 +1393,16 @@ class OpenTIRApp(ctk.CTk):
         if r_hits:
             r_hits = np.array(r_hits)
             powers = np.array(powers)
-            self.ax_iso.bar(r_hits, powers, width=0.5, alpha=0.7, color="orange")
+            # Plot for both positive and negative r
+            r_pos = r_hits
+            r_neg = -r_hits
+            pow_pos = powers
+            pow_neg = powers
+            self.ax_iso.bar(r_pos, pow_pos, width=0.5, alpha=0.7, color="orange", label="r > 0")
+            self.ax_iso.bar(r_neg, pow_neg, width=0.5, alpha=0.7, color="steelblue", label="r < 0")
             self.ax_iso.set_xlabel("r [mm]")
             self.ax_iso.set_ylabel("Power")
+            self.ax_iso.legend(loc="best")
 
         # LEE breakdown
         self.ax_lee.clear()
@@ -1636,7 +1643,7 @@ class OpenTIRApp(ctk.CTk):
                 
                 # Plot system
                 if self._last_traces and self._plot_system:
-                    plot_system(self._plot_system, self._last_traces, ax=ax_sys, dark=False, fill_lenses=True, linewidth_power=True)
+                    plot_system(self._plot_system, self._last_traces, ax=ax_sys, linewidth_power=True)
                     ax_sys.set_title("System Layout", color="black", fontsize=14, fontweight='bold')
                     
                     # Add lens descriptions

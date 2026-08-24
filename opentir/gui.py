@@ -1008,8 +1008,15 @@ class OpenTIRApp(ctk.CTk):
         self.toolbar.update()
         self.toolbar.pack(side="bottom", fill="x")
 
+        # Pan with left mouse button
+        self._pan_active = False
+        self._pan_last_x = None
+        self._pan_last_y = None
+
         self.canvas.mpl_connect("scroll_event", self._on_scroll)
-        self.canvas.mpl_connect("button_press_event", self._on_right_click)
+        self.canvas.mpl_connect("button_press_event", self._on_button_press)
+        self.canvas.mpl_connect("motion_notify_event", self._on_motion_notify)
+        self.canvas.mpl_connect("button_release_event", self._on_button_release)
 
         # Right panel — analysis
         right_panel = ctk.CTkFrame(main_frame, fg_color=BG_CARD, corner_radius=8, width=420)
@@ -1078,7 +1085,16 @@ class OpenTIRApp(ctk.CTk):
         self.canvas_iso = FigureCanvasTkAgg(self.fig_iso, master=tab_dist)
         self.canvas_iso.get_tk_widget().pack(fill="both", expand=True, padx=4, pady=4)
         
-        # Tab 3: Isofote
+        # Tab 3: Isofote Preview
+        tab_iso_preview = self.analysis_tabs.add("Isofote Preview")
+        self.fig_iso_preview = Figure(facecolor="#1e1e1e", dpi=80, figsize=(4, 3))
+        self.ax_iso_preview = self.fig_iso_preview.add_subplot(1, 1, 1)
+        self._style_ax(self.ax_iso_preview)
+        self.ax_iso_preview.set_title("Isofote preview")
+        self.canvas_iso_preview = FigureCanvasTkAgg(self.fig_iso_preview, master=tab_iso_preview)
+        self.canvas_iso_preview.get_tk_widget().pack(fill="both", expand=True, padx=4, pady=4)
+        
+        # Tab 4: Isofote Detail
         tab_iso_detail = self.analysis_tabs.add("Isofote")
         self.fig_iso_detail = Figure(facecolor="#1e1e1e", dpi=80, figsize=(4, 3))
         self.ax_iso_detail = self.fig_iso_detail.add_subplot(1, 1, 1)
@@ -1087,7 +1103,7 @@ class OpenTIRApp(ctk.CTk):
         self.canvas_iso_detail = FigureCanvasTkAgg(self.fig_iso_detail, master=tab_iso_detail)
         self.canvas_iso_detail.get_tk_widget().pack(fill="both", expand=True, padx=4, pady=4)
         
-        # Tab 4: LEE Breakdown
+        # Tab 5: LEE Breakdown
         tab_lee = self.analysis_tabs.add("LEE Breakdown")
         self.fig_lee = Figure(facecolor="#1e1e1e", dpi=80, figsize=(4, 3))
         self.ax_lee = self.fig_lee.add_subplot(1, 1, 1)
@@ -1506,19 +1522,62 @@ class OpenTIRApp(ctk.CTk):
         ax.set_ylim([yd + (y - yd) * factor for y in ax.get_ylim()])
         self.canvas.draw_idle()
 
-    def _on_mouse_pan(self, event):
-        """Handle mouse pan with left button drag."""
+    def _on_button_press(self, event):
+        """Handle mouse button press for pan and reset."""
         if event.inaxes != self.ax_system:
             return
-        if event.button != 1:  # Only left button
+        if event.button == 1:  # Left button - start pan
+            self._pan_active = True
+            self._pan_last_x = event.xdata
+            self._pan_last_y = event.ydata
+        elif event.button == 3:  # Right button - reset view
+            self._reset_view_to_surfaces()
+
+    def _on_motion_notify(self, event):
+        """Handle mouse motion for pan."""
+        if not self._pan_active or event.inaxes != self.ax_system:
             return
-        # Pan logic handled by matplotlib's built-in pan tool
-        pass
+        if self._pan_last_x is None or self._pan_last_y is None:
+            return
+        
+        dx = self._pan_last_x - event.xdata
+        dy = self._pan_last_y - event.ydata
+        
+        xlim = self.ax_system.get_xlim()
+        ylim = self.ax_system.get_ylim()
+        
+        self.ax_system.set_xlim(xlim[0] + dx, xlim[1] + dx)
+        self.ax_system.set_ylim(ylim[0] + dy, ylim[1] + dy)
+        
+        self._pan_last_x = event.xdata
+        self._pan_last_y = event.ydata
+        self.canvas.draw_idle()
+
+    def _on_button_release(self, event):
+        """Handle mouse button release."""
+        if event.button == 1:
+            self._pan_active = False
+            self._pan_last_x = None
+            self._pan_last_y = None
+
+    def _on_scroll(self, event):
+        """Handle mouse wheel zoom."""
+        ax = self.ax_system
+        x, y = ax.transAxes.inverted().transform(ax.transData.transform((event.xdata, event.ydata)))
+        if not (0 <= x <= 1 and 0 <= y <= 1):
+            return
+        factor = 1.15 if event.button == "down" else 1/1.15
+        xd, yd = event.xdata, event.ydata
+        if xd is None or yd is None:
+            return
+        ax.set_xlim([xd + (x - xd) * factor for x in ax.get_xlim()])
+        ax.set_ylim([yd + (y - yd) * factor for y in ax.get_ylim()])
+        self.canvas.draw_idle()
 
     def _on_right_click(self, event):
+        """Legacy handler for right click - reset view."""
         if event.button != 3 or event.inaxes != self.ax_system:
             return
-        # Reset view to show all surfaces (excluding rays)
         self._reset_view_to_surfaces()
 
     def _reset_view_to_surfaces(self):
@@ -1698,10 +1757,11 @@ class OpenTIRApp(ctk.CTk):
                 
                 pdf.savefig(fig_system, bbox_inches='tight')
                 
-                # Pages 2-5: The 4 analysis tabs
+                # Pages 2-6: The 5 analysis tabs
                 for fig, title in [
                     (self.fig_illum, "Illuminamento"),
                     (self.fig_iso, "Distribuzione"),
+                    (self.fig_iso_preview, "Isofote Preview"),
                     (self.fig_iso_detail, "Isofote"),
                     (self.fig_lee, "LEE Breakdown")
                 ]:

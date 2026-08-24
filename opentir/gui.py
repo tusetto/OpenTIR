@@ -1635,10 +1635,8 @@ class OpenTIRApp(ctk.CTk):
                 ax_sys.set_facecolor("white")
                 
                 # Plot system
-                if self._last_traces:
-                    plot_system(self._last_source, self.surfaces, self._last_traces,
-                               ax=ax_sys, dark=False, fill_lenses=True,
-                               linewidth_power=True)
+                if self._last_traces and self._plot_system:
+                    plot_system(self._plot_system, self._last_traces, ax=ax_sys, dark=False, fill_lenses=True, linewidth_power=True)
                     ax_sys.set_title("System Layout", color="black", fontsize=14, fontweight='bold')
                     
                     # Add lens descriptions

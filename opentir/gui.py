@@ -1297,6 +1297,14 @@ class OpenTIRApp(ctk.CTk):
                     else:
                         r_pts = np.array([[rd["p1"][0], 0], [rd["p2"][0], r_max]])
 
+                    # Apply origin_r offset to the fill data immediately
+                    origin_r = float(s.get("origin_r", 0.0))
+                    if origin_r != 0.0:
+                        f_pts = f_pts.copy()
+                        r_pts = r_pts.copy()
+                        f_pts[:, 1] += origin_r
+                        r_pts[:, 1] += origin_r
+                    
                     self._lens_fill_data.append((f_pts, r_pts, color))
                 else:
                     for obj in build_surface_objects(s):

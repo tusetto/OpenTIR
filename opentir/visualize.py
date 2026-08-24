@@ -17,7 +17,7 @@ stays clean.
 
 Ray rendering
 -------------
-  - Transmitted / mirror / TIR rays: solid, linewidth 0.8, alpha 0.80.
+  - Transmitted / mirror / TIR rays: solid, linewidth 2.5 (scaled by power), alpha 0.80.
   - Fresnel-reflected rays: dashed, linewidth 0.35, alpha 0.30.
     `reflected_length` controls how far they extend from the bounce
     point (mm). Set to 0 to hide them entirely.
@@ -74,7 +74,7 @@ def plot_system(system, traces=None, ax=None, show_axis=True,
         point. Set to 0 to hide all reflected rays.
     linewidth_power : bool
         If True, scale ray linewidth proportionally to their relative power.
-        Base linewidth is 0.8, scaled by (power / max_power).
+        Base linewidth is 2.5, scaled by (power / max_power).
     """
     if ax is None:
         _, ax = plt.subplots(figsize=(8, 6))
@@ -137,10 +137,10 @@ def plot_system(system, traces=None, ax=None, show_axis=True,
             
             # Scale linewidth by relative power if enabled
             if linewidth_power and max_power > 0:
-                base_lw = 0.8
-                lw = max(0.2, base_lw * (power / max_power))
+                base_lw = 2.5
+                lw = max(0.5, base_lw * (power / max_power))
             else:
-                lw = 0.8
+                lw = 2.5
 
             if is_refl:
                 if reflected_length <= 0:

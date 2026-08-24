@@ -692,7 +692,7 @@ class LEDSourcePanel(ctk.CTkToplevel):
     def __init__(self, master, on_save, source_def=None):
         super().__init__(master)
         self.title("Sorgente LED")
-        self.geometry("380x620")
+        self.geometry("380x820")
         self.resizable(True, True)
         self.grab_set()
         self.on_save = on_save
@@ -707,7 +707,6 @@ class LEDSourcePanel(ctk.CTkToplevel):
         self.src_les_shape = tk.StringVar(value="point")
         self.src_les_size = tk.StringVar(value="1.25")
         self.src_les_n = tk.StringVar(value="5")
-        self.enable_chromatic = tk.BooleanVar(value=False)
 
         if source_def:
             self._populate(source_def)
@@ -760,17 +759,11 @@ class LEDSourcePanel(ctk.CTkToplevel):
         self._les_n_lbl = _lbl(les_frame, "N. sotto-sorgenti", font=FONT_SMALL)
         self._les_n_entry = _entry(les_frame, self.src_les_n, width=80)
 
-        chrom_frame = ctk.CTkFrame(self, fg_color=BG_CARD, corner_radius=8)
-        chrom_frame.pack(fill="x", padx=10, pady=8)
-        _lbl(chrom_frame, "Aberrazione cromatica", font=FONT_BOLD).grid(row=0, column=0, sticky="w", **pad)
-        ctk.CTkCheckBox(chrom_frame, text="Simula dispersione cromatica",
-                       variable=self.enable_chromatic, font=FONT_SMALL).grid(row=1, column=0, sticky="w", **pad)
-
         self._total_rays_lbl = _lbl(self, "Raggi totali: 0", font=FONT_SMALL, text_color="#58a6ff")
         self._total_rays_lbl.pack(pady=8)
 
         btn_frame = ctk.CTkFrame(self, fg_color="transparent")
-        btn_frame.pack(fill="x", padx=10, pady=10)
+        btn_frame.pack(fill="x", padx=10, pady=(4, 10))
         _btn(btn_frame, "✓  Applica", self._apply, width=120).pack(side="left", padx=5)
         _btn(btn_frame, "✕  Annulla", self.destroy, width=120,
              fg_color="gray30", hover_color="gray40").pack(side="left", padx=5)
@@ -814,7 +807,6 @@ class LEDSourcePanel(ctk.CTkToplevel):
                 "les_shape": self.src_les_shape.get(),
                 "les_size": float(self.src_les_size.get()) if self.src_les_shape.get() != "point" else 0.0,
                 "les_n": int(self.src_les_n.get()) if self.src_les_shape.get() != "point" else 1,
-                "enable_chromatic": self.enable_chromatic.get(),
             }
             self.on_save(source_def)
             self.destroy()
@@ -832,7 +824,6 @@ class LEDSourcePanel(ctk.CTkToplevel):
         self.src_les_shape.set(source_def.get("les_shape", "point"))
         self.src_les_size.set(str(source_def.get("les_size", 1.25)))
         self.src_les_n.set(str(source_def.get("les_n", 5)))
-        self.enable_chromatic.set(source_def.get("enable_chromatic", False))
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -934,6 +925,7 @@ class OpenTIRApp(ctk.CTk):
             "les_shape": "point",
             "les_size": 1.25,
             "les_n": 5,
+            "enable_chromatic": False,
         }
         self._last_traces = None
         self._last_total_power = None
@@ -972,6 +964,15 @@ class OpenTIRApp(ctk.CTk):
             _entry(sim_frame, var, width=w).pack(side="left", padx=2)
 
         self.auto_update_var = tk.BooleanVar(value=True)
+        self.enable_chromatic_var = tk.BooleanVar(value=False)
+        self.chromatic_n_rays = tk.StringVar(value="5")
+        
+        # Casella per il numero di lunghezze d'onda PRIMA della label
+        ctk.CTkLabel(top_bar, text="N. λ:", font=FONT_SMALL).pack(side="left", padx=(0, 2))
+        _entry(top_bar, self.chromatic_n_rays, width=40).pack(side="left", padx=2)
+        
+        ctk.CTkCheckBox(top_bar, text="Simula dispersione cromatica",
+                       variable=self.enable_chromatic_var, font=FONT_SMALL).pack(side="left", padx=10)
         ctk.CTkCheckBox(top_bar, text="Auto-aggiornamento",
                        variable=self.auto_update_var, font=FONT_SMALL).pack(side="left", padx=10)
 
@@ -1017,15 +1018,6 @@ class OpenTIRApp(ctk.CTk):
 
         self._build_analysis_panel(right_panel)
 
-        # Bottom stats bar
-        stats_bar = ctk.CTkFrame(self, fg_color=BG_CARD, corner_radius=8, height=40)
-        stats_bar.pack(fill="x", padx=8, pady=(0, 8))
-        stats_bar.pack_propagate(False)
-
-        self.stats_label = _lbl(stats_bar, "Pronta per la simulazione",
-                               font=FONT_SMALL, text_color="#58a6ff")
-        self.stats_label.pack(padx=8, pady=6)
-
     def _build_surface_panel(self, parent):
         # Header
         header = ctk.CTkFrame(parent, fg_color="transparent")
@@ -1057,60 +1049,62 @@ class OpenTIRApp(ctk.CTk):
         _btn(proj_frame, "💾 Salva progetto", self._save_project, width=140).pack(side="left", padx=2)
         _btn(proj_frame, "📂 Carica", self._load_project, width=100).pack(side="left", padx=2)
 
+        # DXF Export button
+        dxf_frame = ctk.CTkFrame(parent, fg_color="transparent")
+        dxf_frame.pack(fill="x", padx=8, pady=4)
+        _btn(dxf_frame, "📐 Esporta DXF superfici", self._export_dxf, width=180,
+             fg_color="#2a6a4a").pack(side="left", padx=2)
+
     def _build_analysis_panel(self, parent):
-        # Illuminance histogram
-        hist_frame = ctk.CTkFrame(parent, fg_color=BG_DARK, corner_radius=8, height=220)
-        hist_frame.pack(fill="x", padx=8, pady=8)
-        hist_frame.pack_propagate(False)
-
-        _lbl(hist_frame, "Illuminamento sul target", font=FONT_BOLD).pack(padx=8, pady=(6, 2), anchor="w")
-
-        self.fig_illum = Figure(facecolor="#1e1e1e", dpi=80, figsize=(4, 2.5))
+        # Tab widget per i 4 grafici
+        self.analysis_tabs = ctk.CTkTabview(parent)
+        self.analysis_tabs.pack(fill="both", expand=True, padx=8, pady=8)
+        
+        # Tab 1: Illuminamento
+        tab_illum = self.analysis_tabs.add("Illuminamento")
+        self.fig_illum = Figure(facecolor="#1e1e1e", dpi=80, figsize=(4, 3))
         self.ax_illum = self.fig_illum.add_subplot(1, 1, 1)
         self._style_ax(self.ax_illum)
         self.ax_illum.set_title("Illuminance distribution")
-
-        self.canvas_illum = FigureCanvasTkAgg(self.fig_illum, master=hist_frame)
+        self.canvas_illum = FigureCanvasTkAgg(self.fig_illum, master=tab_illum)
         self.canvas_illum.get_tk_widget().pack(fill="both", expand=True, padx=4, pady=4)
-
-        # Radial distribution
-        iso_frame = ctk.CTkFrame(parent, fg_color=BG_DARK, corner_radius=8, height=220)
-        iso_frame.pack(fill="x", padx=8, pady=4)
-        iso_frame.pack_propagate(False)
-
-        _lbl(iso_frame, "Distribuzione radiale", font=FONT_BOLD).pack(padx=8, pady=(6, 2), anchor="w")
-
-        self.fig_iso = Figure(facecolor="#1e1e1e", dpi=80, figsize=(4, 2.5))
+        
+        # Tab 2: Distribuzione
+        tab_dist = self.analysis_tabs.add("Distribuzione")
+        self.fig_iso = Figure(facecolor="#1e1e1e", dpi=80, figsize=(4, 3))
         self.ax_iso = self.fig_iso.add_subplot(1, 1, 1)
         self._style_ax(self.ax_iso)
         self.ax_iso.set_title("Radial distribution")
-
-        self.canvas_iso = FigureCanvasTkAgg(self.fig_iso, master=iso_frame)
+        self.canvas_iso = FigureCanvasTkAgg(self.fig_iso, master=tab_dist)
         self.canvas_iso.get_tk_widget().pack(fill="both", expand=True, padx=4, pady=4)
-
-        # LEE breakdown
-        lee_frame = ctk.CTkFrame(parent, fg_color=BG_DARK, corner_radius=8)
-        lee_frame.pack(fill="both", expand=True, padx=8, pady=4)
-
-        _lbl(lee_frame, "LEE Breakdown", font=FONT_BOLD).pack(padx=8, pady=(6, 2), anchor="w")
-
+        
+        # Tab 3: Isofote
+        tab_iso_detail = self.analysis_tabs.add("Isofote")
+        self.fig_iso_detail = Figure(facecolor="#1e1e1e", dpi=80, figsize=(4, 3))
+        self.ax_iso_detail = self.fig_iso_detail.add_subplot(1, 1, 1)
+        self._style_ax(self.ax_iso_detail)
+        self.ax_iso_detail.set_title("Isofote detail")
+        self.canvas_iso_detail = FigureCanvasTkAgg(self.fig_iso_detail, master=tab_iso_detail)
+        self.canvas_iso_detail.get_tk_widget().pack(fill="both", expand=True, padx=4, pady=4)
+        
+        # Tab 4: LEE Breakdown
+        tab_lee = self.analysis_tabs.add("LEE Breakdown")
         self.fig_lee = Figure(facecolor="#1e1e1e", dpi=80, figsize=(4, 3))
         self.ax_lee = self.fig_lee.add_subplot(1, 1, 1)
         self._style_ax(self.ax_lee)
         self.ax_lee.set_title("LEE Breakdown")
-
-        self.canvas_lee = FigureCanvasTkAgg(self.fig_lee, master=lee_frame)
+        self.canvas_lee = FigureCanvasTkAgg(self.fig_lee, master=tab_lee)
         self.canvas_lee.get_tk_widget().pack(fill="both", expand=True, padx=4, pady=4)
-
-        # Export buttons
+        
+        # Export buttons sotto i tab
         exp_frame = ctk.CTkFrame(parent, fg_color="transparent")
         exp_frame.pack(fill="x", padx=8, pady=4)
-        _btn(exp_frame, "💾 Esporta DXF", self._export_dxf, width=120,
-             fg_color="#2a5a2a").pack(side="left", padx=2)
-        _btn(exp_frame, "🌡 Isofote", self._show_isophote, width=100,
-             fg_color="#5a3a2a").pack(side="left", padx=2)
-        _btn(exp_frame, "📊 LEE", self._show_lee, width=80,
-             fg_color="#3a2a5a").pack(side="left", padx=2)
+        _btn(exp_frame, "💾 Save Complete Report", self._save_complete_report, width=160,
+             fg_color="#2a5a8a").pack(side="left", padx=2)
+        _btn(exp_frame, "📄 Save PDF", self._save_results_pdf, width=100,
+             fg_color="#2a4a6a").pack(side="left", padx=2)
+        _btn(exp_frame, "🖼 Save PNG", self._save_results_png, width=100,
+             fg_color="#3a5a3a").pack(side="left", padx=2)
 
     def _style_ax(self, ax):
         ax.set_facecolor("#252526")
@@ -1289,6 +1283,14 @@ class OpenTIRApp(ctk.CTk):
                     else:
                         r_pts = np.array([[rd["p1"][0], 0], [rd["p2"][0], r_max]])
 
+                    # Apply origin_r offset to the fill data immediately
+                    origin_r = float(s.get("origin_r", 0.0))
+                    if origin_r != 0.0:
+                        f_pts = f_pts.copy()
+                        r_pts = r_pts.copy()
+                        f_pts[:, 1] += origin_r
+                        r_pts[:, 1] += origin_r
+                    
                     self._lens_fill_data.append((f_pts, r_pts, color))
                 else:
                     for obj in build_surface_objects(s):
@@ -1315,6 +1317,17 @@ class OpenTIRApp(ctk.CTk):
 
             base_rays = source.generate_rays()
             self._last_source = source
+
+            # Chromatic dispersion: expand rays by wavelength if enabled
+            if self.enable_chromatic_var.get():
+                try:
+                    n_wl = max(1, int(self.chromatic_n_rays.get()))
+                except ValueError:
+                    n_wl = 5
+                wavelengths = wavelength_samples(n_wl)
+                chromatic_ray_list = chromatic_rays(base_rays, wavelengths)
+                # Extract just the Ray objects for tracing
+                base_rays = [ray for (_, ray) in chromatic_ray_list]
 
             max_b = int(self.max_bounces.get())
             min_p = float(self.min_power.get())
@@ -1349,7 +1362,7 @@ class OpenTIRApp(ctk.CTk):
         self._style_ax(self.ax_system)
         self.ax_system.set_title("OpenTIR – ray trace")
 
-        plot_system(self._plot_system, self._last_traces, ax=self.ax_system,
+        plot_system(self._plot_system, self._last_traces, self.ax_system,
                    reflected_length=reflected_length, linewidth_power=True)
         self._draw_lens_fills(self.ax_system)
 
@@ -1380,9 +1393,16 @@ class OpenTIRApp(ctk.CTk):
         if r_hits:
             r_hits = np.array(r_hits)
             powers = np.array(powers)
-            self.ax_iso.bar(r_hits, powers, width=0.5, alpha=0.7, color="orange")
+            # Plot for both positive and negative r
+            r_pos = r_hits
+            r_neg = -r_hits
+            pow_pos = powers
+            pow_neg = powers
+            self.ax_iso.bar(r_pos, pow_pos, width=0.5, alpha=0.7, color="orange", label="r > 0")
+            self.ax_iso.bar(r_neg, pow_neg, width=0.5, alpha=0.7, color="steelblue", label="r < 0")
             self.ax_iso.set_xlabel("r [mm]")
             self.ax_iso.set_ylabel("Power")
+            self.ax_iso.legend(loc="best")
 
         # LEE breakdown
         self.ax_lee.clear()
@@ -1396,14 +1416,73 @@ class OpenTIRApp(ctk.CTk):
 
         plot_lee_pie(self._last_lee, ax=self.ax_lee, dark=True)
 
+        # Isofote preview
+        self.ax_iso_preview.clear()
+        self._style_ax(self.ax_iso_preview)
+        self.ax_iso_preview.set_title("Isofote preview")
+        
+        # Isofote detail tab
+        self.ax_iso_detail.clear()
+        self._style_ax(self.ax_iso_detail)
+        self.ax_iso_detail.set_title("Isofote detail")
+        
+        if self._last_traces:
+            r_hits_iso, powers_iso = get_hit_points(
+                self._last_traces,
+                target_name=targets[0] if targets else None)
+            
+            if len(r_hits_iso) >= 3:
+                n_az = 64
+                thetas = np.linspace(0, 2 * np.pi, n_az, endpoint=False)
+                x_all, y_all, w_all = [], [], []
+                for r, p in zip(r_hits_iso, powers_iso):
+                    xs = r * np.cos(thetas)
+                    ys = r * np.sin(thetas)
+                    x_all.extend(xs)
+                    y_all.extend(ys)
+                    w_all.extend([p / n_az] * n_az)
+
+                x_all = np.array(x_all)
+                y_all = np.array(y_all)
+                w_all = np.array(w_all)
+
+                lim = max(abs(r_hits_iso).max() * 1.05, 1.0)
+                n_bins = 40
+                edges = np.linspace(-lim, lim, n_bins + 1)
+                H, xedg, yedg = np.histogram2d(x_all, y_all, bins=edges, weights=w_all)
+                xc = 0.5 * (xedg[:-1] + xedg[1:])
+                yc = 0.5 * (yedg[:-1] + yedg[1:])
+                XX, YY = np.meshgrid(xc, yc)
+                ZZ = gaussian_filter(H.T, sigma=1.5)
+
+                cf = self.ax_iso_preview.contourf(XX, YY, ZZ, levels=12, cmap="inferno")
+                cs = self.ax_iso_preview.contour(XX, YY, ZZ, levels=12, colors="white", linewidths=0.5, alpha=0.6)
+                self.ax_iso_preview.clabel(cs, inline=True, fontsize=7, fmt=lambda v: f"{v:.2e}", colors="white")
+                self.ax_iso_preview.set_xlabel("x [mm]", color="white")
+                self.ax_iso_preview.set_ylabel("y [mm]", color="white")
+                self.ax_iso_preview.set_aspect("equal")
+                
+                # Same plot for detail tab but with higher resolution
+                cf2 = self.ax_iso_detail.contourf(XX, YY, ZZ, levels=20, cmap="inferno")
+                cs2 = self.ax_iso_detail.contour(XX, YY, ZZ, levels=12, colors="white", linewidths=0.5, alpha=0.6)
+                self.ax_iso_detail.clabel(cs2, inline=True, fontsize=8, fmt=lambda v: f"{v:.2e}", colors="white")
+                self.ax_iso_detail.set_xlabel("x [mm]", color="white")
+                self.ax_iso_detail.set_ylabel("y [mm]", color="white")
+                self.ax_iso_detail.set_aspect("equal")
+                self.fig_iso_detail.colorbar(cf2, ax=self.ax_iso_detail, pad=0.02).set_label("Illuminamento [a.u.]", color="white")
+
         self.figure.tight_layout(pad=1.5)
         self.canvas.draw_idle()
         self.fig_illum.tight_layout()
         self.canvas_illum.draw_idle()
         self.fig_iso.tight_layout()
         self.canvas_iso.draw_idle()
+        self.fig_iso_detail.tight_layout()
+        self.canvas_iso_detail.draw_idle()
         self.fig_lee.tight_layout()
         self.canvas_lee.draw_idle()
+        self.fig_iso_preview.tight_layout()
+        self.canvas_iso_preview.draw_idle()
 
     def _draw_lens_fills(self, ax):
         if not hasattr(self, "_lens_fill_data"):
@@ -1417,7 +1496,7 @@ class OpenTIRApp(ctk.CTk):
     # ── Event handlers ─────────────────────────────────────────────────────────
     def _on_scroll(self, event):
         ax = event.inaxes
-        if ax is None:
+        if ax is None or ax != self.ax_system:
             return
         factor = 1.15 if event.button == "down" else 1/1.15
         xd, yd = event.xdata, event.ydata
@@ -1427,12 +1506,46 @@ class OpenTIRApp(ctk.CTk):
         ax.set_ylim([yd + (y - yd) * factor for y in ax.get_ylim()])
         self.canvas.draw_idle()
 
-    def _on_right_click(self, event):
-        if event.button != 3 or event.inaxes is None:
+    def _on_mouse_pan(self, event):
+        """Handle mouse pan with left button drag."""
+        if event.inaxes != self.ax_system:
             return
-        event.inaxes.relim()
-        event.inaxes.autoscale()
-        self.canvas.draw_idle()
+        if event.button != 1:  # Only left button
+            return
+        # Pan logic handled by matplotlib's built-in pan tool
+        pass
+
+    def _on_right_click(self, event):
+        if event.button != 3 or event.inaxes != self.ax_system:
+            return
+        # Reset view to show all surfaces (excluding rays)
+        self._reset_view_to_surfaces()
+
+    def _reset_view_to_surfaces(self):
+        """Reset zoom to show all defined surfaces, excluding rays."""
+        if not self._plot_system or not self._plot_system.surfaces:
+            return
+        
+        # Collect all surface points
+        all_z = []
+        all_r = []
+        for surf in self._plot_system.surfaces:
+            pts = surf.geometry.sample_points()
+            all_z.extend(pts[:, 0])
+            all_r.extend(pts[:, 1])
+            all_r.extend(-pts[:, 1])  # Include symmetric part
+        
+        if all_z and all_r:
+            z_min, z_max = min(all_z), max(all_z)
+            r_min, r_max = min(all_r), max(all_r)
+            
+            # Add padding
+            z_pad = (z_max - z_min) * 0.1 or 1.0
+            r_pad = (r_max - r_min) * 0.1 or 1.0
+            
+            self.ax_system.set_xlim(z_min - z_pad, z_max + z_pad)
+            self.ax_system.set_ylim(r_min - r_pad, r_max + r_pad)
+            self.canvas.draw_idle()
 
     # ─ Export and analysis ────────────────────────────────────────────────────
     def _export_dxf(self):
@@ -1465,6 +1578,138 @@ class OpenTIRApp(ctk.CTk):
             messagebox.showinfo("Esportato", f"File DXF salvato in:\n{path}")
         except Exception as exc:
             messagebox.showerror("Errore export DXF", str(exc))
+
+    def _export_figure(self, fig, name_prefix):
+        """Export a matplotlib figure to PDF format."""
+        from tkinter import filedialog
+        path = filedialog.asksaveasfilename(
+            defaultextension=".pdf",
+            filetypes=[("PDF Document", "*.pdf"), ("PNG Image", "*.png")],
+            initialfile=f"{name_prefix}_opentir.pdf")
+        if not path:
+            return
+        try:
+            fig.savefig(path, dpi=150, bbox_inches='tight')
+            messagebox.showinfo("Esportato", f"Grafico salvato in:\n{path}")
+        except Exception as exc:
+            messagebox.showerror("Errore export", str(exc))
+
+    def _export_figure_png(self, fig, name_prefix):
+        """Export a matplotlib figure to PNG format."""
+        from tkinter import filedialog
+        path = filedialog.asksaveasfilename(
+            defaultextension=".png",
+            filetypes=[("PNG Image", "*.png")],
+            initialfile=f"{name_prefix}_opentir.png")
+        if not path:
+            return
+        try:
+            fig.savefig(path, dpi=300, bbox_inches='tight', facecolor=fig.get_facecolor())
+            messagebox.showinfo("Esportato", f"Grafico salvato in:\n{path}")
+        except Exception as exc:
+            messagebox.showerror("Errore export", str(exc))
+
+    def _save_results_pdf(self):
+        """Export all 4 tabs to a single PDF."""
+        from tkinter import filedialog
+        from matplotlib.backends.backend_pdf import PdfPages
+        
+        path = filedialog.asksaveasfilename(
+            defaultextension=".pdf",
+            filetypes=[("PDF Document", "*.pdf")],
+            initialfile="risultati_opentir.pdf")
+        if not path:
+            return
+        try:
+            with PdfPages(path) as pdf:
+                # Save each tab's figure
+                for fig, title in [
+                    (self.fig_illum, "Illuminamento"),
+                    (self.fig_iso, "Distribuzione"),
+                    (self.fig_iso_detail, "Isofote"),
+                    (self.fig_lee, "LEE Breakdown")
+                ]:
+                    pdf.savefig(fig, bbox_inches='tight')
+            messagebox.showinfo("Esportato", f"Risultati salvati in:\n{path}")
+        except Exception as exc:
+            messagebox.showerror("Errore export", str(exc))
+
+    def _save_results_png(self):
+        """Export all 4 tabs as separate PNG files."""
+        from tkinter import filedialog
+        import os
+        
+        folder = filedialog.askdirectory()
+        if not folder:
+            return
+        try:
+            for fig, name in [
+                (self.fig_illum, "illuminamento"),
+                (self.fig_iso, "distribuzione"),
+                (self.fig_iso_detail, "isofote"),
+                (self.fig_lee, "lee")
+            ]:
+                filepath = os.path.join(folder, f"{name}_opentir.png")
+                fig.savefig(filepath, dpi=300, bbox_inches='tight', facecolor=fig.get_facecolor())
+            messagebox.showinfo("Esportato", f"Risultati salvati nella cartella:\n{folder}")
+        except Exception as exc:
+            messagebox.showerror("Errore export", str(exc))
+
+    def _save_complete_report(self):
+        """Export complete report with all data and images."""
+        from tkinter import filedialog
+        from matplotlib.backends.backend_pdf import PdfPages
+        import io
+        from PIL import Image
+        
+        path = filedialog.asksaveasfilename(
+            defaultextension=".pdf",
+            filetypes=[("PDF Document", "*.pdf")],
+            initialfile="report_completo_opentir.pdf")
+        if not path:
+            return
+        try:
+            with PdfPages(path) as pdf:
+                # Page 1: System layout with lens description
+                fig_system = Figure(figsize=(8.5, 11), facecolor="white", dpi=100)
+                ax_sys = fig_system.add_subplot(1, 1, 1)
+                ax_sys.set_facecolor("white")
+                
+                # Plot system
+                if self._last_traces and self._plot_system:
+                    plot_system(self._plot_system, self._last_traces, ax_sys, linewidth_power=True)
+                    ax_sys.set_title("System Layout", color="black", fontsize=14, fontweight='bold')
+                    
+                    # Add lens descriptions
+                    desc_y = -0.15
+                    desc_text = "Superfici definite:\n\n"
+                    for i, surf in enumerate(self.surfaces):
+                        if surf.get("type") == "lens":
+                            mat_name = surf.get("material_front", "Aria (n=1.00)")
+                            if mat_name == "Personalizzato...":
+                                mat_name = f"n={surf.get('material_front_n', 1.0)}"
+                            desc_text += f"Lente {i+1}: Materiale={mat_name}, Origine Z={surf.get('origin_z', 0)}, R={surf.get('origin_r', 0)}\n"
+                        elif surf.get("kind"):
+                            desc_text += f"Superficie {i+1}: Tipo={surf.get('kind')}\n"
+                    
+                    ax_sys.text(0.02, desc_y, desc_text, transform=ax_sys.transAxes,
+                               fontsize=9, verticalalignment='bottom',
+                               bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+                
+                pdf.savefig(fig_system, bbox_inches='tight')
+                
+                # Pages 2-5: The 4 analysis tabs
+                for fig, title in [
+                    (self.fig_illum, "Illuminamento"),
+                    (self.fig_iso, "Distribuzione"),
+                    (self.fig_iso_detail, "Isofote"),
+                    (self.fig_lee, "LEE Breakdown")
+                ]:
+                    pdf.savefig(fig, bbox_inches='tight')
+                    
+            messagebox.showinfo("Esportato", f"Report completo salvato in:\n{path}")
+        except Exception as exc:
+            messagebox.showerror("Errore export", str(exc))
 
     def _show_isophote(self):
         if not self._last_traces:
@@ -1528,6 +1773,12 @@ class OpenTIRApp(ctk.CTk):
         canvas_iso = FigureCanvasTkAgg(fig_iso, master=win)
         canvas_iso.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
         NavigationToolbar2Tk(canvas_iso, win, pack_toolbar=False).pack(side="bottom", fill="x", padx=10)
+        
+        # Add PDF/PNG export buttons to the window
+        exp_btn_frame = ctk.CTkFrame(win, fg_color="transparent")
+        exp_btn_frame.pack(fill="x", padx=10, pady=5)
+        _btn(exp_btn_frame, "💾 Salva PDF", lambda: self._export_figure(fig_iso, "illuminamento"), width=120).pack(side="left", padx=5)
+        _btn(exp_btn_frame, "🖼 Salva PNG", lambda: self._export_figure_png(fig_iso, "illuminamento"), width=120, fg_color="#3a5a3a").pack(side="left", padx=5)
 
     def _show_lee(self):
         if not self._last_traces or self._last_lee is None:
@@ -1551,6 +1802,12 @@ class OpenTIRApp(ctk.CTk):
         canvas_lee = FigureCanvasTkAgg(fig_lee, master=win)
         canvas_lee.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
         NavigationToolbar2Tk(canvas_lee, win, pack_toolbar=False).pack(side="bottom", fill="x", padx=10)
+        
+        # Add PDF/PNG export buttons to the window
+        exp_btn_frame = ctk.CTkFrame(win, fg_color="transparent")
+        exp_btn_frame.pack(fill="x", padx=10, pady=5)
+        _btn(exp_btn_frame, "💾 Salva PDF", lambda: self._export_figure(fig_lee, "lee"), width=120).pack(side="left", padx=5)
+        _btn(exp_btn_frame, "🖼 Salva PNG", lambda: self._export_figure_png(fig_lee, "lee"), width=120, fg_color="#3a5a3a").pack(side="left", padx=5)
 
     # ── Project management ─────────────────────────────────────────────────────
     def _save_project(self):

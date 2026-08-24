@@ -17,7 +17,7 @@ stays clean.
 
 Ray rendering
 -------------
-  - Transmitted / mirror / TIR rays: solid, linewidth 0.8, alpha 0.80.
+  - Transmitted / mirror / TIR rays: solid, linewidth 2.5 (scaled by power), alpha 0.80.
   - Fresnel-reflected rays: dashed, linewidth 0.35, alpha 0.30.
     `reflected_length` controls how far they extend from the bounce
     point (mm). Set to 0 to hide them entirely.
@@ -26,6 +26,8 @@ Ray rendering
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
+
+from .chromatic import wavelength_to_rgb
 
 # Qualitative colour cycle – 10 distinct colours
 _SURF_COLORS = [
@@ -72,7 +74,7 @@ def plot_system(system, traces=None, ax=None, show_axis=True,
         point. Set to 0 to hide all reflected rays.
     linewidth_power : bool
         If True, scale ray linewidth proportionally to their relative power.
-        Base linewidth is 0.8, scaled by (power / max_power).
+        Base linewidth is 2.5, scaled by (power / max_power).
     """
     if ax is None:
         _, ax = plt.subplots(figsize=(8, 6))
@@ -124,16 +126,21 @@ def plot_system(system, traces=None, ax=None, show_axis=True,
         
         for trace in traces:
             is_refl = trace.get("reflected", False)
-            color   = trace.get("_color", "orange")
+            # Get wavelength from trace and compute color for chromatic display
+            wl_nm = trace.get("wavelength_nm", None)
+            if wl_nm is not None:
+                color = wavelength_to_rgb(wl_nm)
+            else:
+                color = trace.get("_color", "orange")
             path    = np.array(trace["path"])
             power   = trace.get("power", 1.0)
             
             # Scale linewidth by relative power if enabled
             if linewidth_power and max_power > 0:
-                base_lw = 0.8
-                lw = max(0.2, base_lw * (power / max_power))
+                base_lw = 2.5
+                lw = max(0.5, base_lw * (power / max_power))
             else:
-                lw = 0.8
+                lw = 2.5
 
             if is_refl:
                 if reflected_length <= 0:

@@ -692,7 +692,7 @@ class LEDSourcePanel(ctk.CTkToplevel):
     def __init__(self, master, on_save, source_def=None):
         super().__init__(master)
         self.title("Sorgente LED")
-        self.geometry("380x620")
+        self.geometry("380x680")
         self.resizable(True, True)
         self.grab_set()
         self.on_save = on_save
@@ -707,7 +707,6 @@ class LEDSourcePanel(ctk.CTkToplevel):
         self.src_les_shape = tk.StringVar(value="point")
         self.src_les_size = tk.StringVar(value="1.25")
         self.src_les_n = tk.StringVar(value="5")
-        self.enable_chromatic = tk.BooleanVar(value=False)
 
         if source_def:
             self._populate(source_def)
@@ -760,17 +759,11 @@ class LEDSourcePanel(ctk.CTkToplevel):
         self._les_n_lbl = _lbl(les_frame, "N. sotto-sorgenti", font=FONT_SMALL)
         self._les_n_entry = _entry(les_frame, self.src_les_n, width=80)
 
-        chrom_frame = ctk.CTkFrame(self, fg_color=BG_CARD, corner_radius=8)
-        chrom_frame.pack(fill="x", padx=10, pady=8)
-        _lbl(chrom_frame, "Aberrazione cromatica", font=FONT_BOLD).grid(row=0, column=0, sticky="w", **pad)
-        ctk.CTkCheckBox(chrom_frame, text="Simula dispersione cromatica",
-                       variable=self.enable_chromatic, font=FONT_SMALL).grid(row=1, column=0, sticky="w", **pad)
-
         self._total_rays_lbl = _lbl(self, "Raggi totali: 0", font=FONT_SMALL, text_color="#58a6ff")
         self._total_rays_lbl.pack(pady=8)
 
         btn_frame = ctk.CTkFrame(self, fg_color="transparent")
-        btn_frame.pack(fill="x", padx=10, pady=10)
+        btn_frame.pack(fill="x", padx=10, pady=(4, 10))
         _btn(btn_frame, "✓  Applica", self._apply, width=120).pack(side="left", padx=5)
         _btn(btn_frame, "✕  Annulla", self.destroy, width=120,
              fg_color="gray30", hover_color="gray40").pack(side="left", padx=5)
@@ -814,7 +807,6 @@ class LEDSourcePanel(ctk.CTkToplevel):
                 "les_shape": self.src_les_shape.get(),
                 "les_size": float(self.src_les_size.get()) if self.src_les_shape.get() != "point" else 0.0,
                 "les_n": int(self.src_les_n.get()) if self.src_les_shape.get() != "point" else 1,
-                "enable_chromatic": self.enable_chromatic.get(),
             }
             self.on_save(source_def)
             self.destroy()
@@ -832,7 +824,6 @@ class LEDSourcePanel(ctk.CTkToplevel):
         self.src_les_shape.set(source_def.get("les_shape", "point"))
         self.src_les_size.set(str(source_def.get("les_size", 1.25)))
         self.src_les_n.set(str(source_def.get("les_n", 5)))
-        self.enable_chromatic.set(source_def.get("enable_chromatic", False))
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -934,6 +925,7 @@ class OpenTIRApp(ctk.CTk):
             "les_shape": "point",
             "les_size": 1.25,
             "les_n": 5,
+            "enable_chromatic": False,
         }
         self._last_traces = None
         self._last_total_power = None
@@ -972,6 +964,9 @@ class OpenTIRApp(ctk.CTk):
             _entry(sim_frame, var, width=w).pack(side="left", padx=2)
 
         self.auto_update_var = tk.BooleanVar(value=True)
+        self.enable_chromatic_var = tk.BooleanVar(value=False)
+        ctk.CTkCheckBox(top_bar, text="Simula dispersione cromatica",
+                       variable=self.enable_chromatic_var, font=FONT_SMALL).pack(side="left", padx=10)
         ctk.CTkCheckBox(top_bar, text="Auto-aggiornamento",
                        variable=self.auto_update_var, font=FONT_SMALL).pack(side="left", padx=10)
 

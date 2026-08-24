@@ -1362,7 +1362,7 @@ class OpenTIRApp(ctk.CTk):
         self._style_ax(self.ax_system)
         self.ax_system.set_title("OpenTIR – ray trace")
 
-        plot_system(self._plot_system, self._last_traces, ax=self.ax_system,
+        plot_system(self._plot_system, self._last_traces, self.ax_system,
                    reflected_length=reflected_length, linewidth_power=True)
         self._draw_lens_fills(self.ax_system)
 
@@ -1496,7 +1496,7 @@ class OpenTIRApp(ctk.CTk):
     # ── Event handlers ─────────────────────────────────────────────────────────
     def _on_scroll(self, event):
         ax = event.inaxes
-        if ax is None:
+        if ax is None or ax != self.ax_system:
             return
         factor = 1.15 if event.button == "down" else 1/1.15
         xd, yd = event.xdata, event.ydata
@@ -1506,12 +1506,46 @@ class OpenTIRApp(ctk.CTk):
         ax.set_ylim([yd + (y - yd) * factor for y in ax.get_ylim()])
         self.canvas.draw_idle()
 
-    def _on_right_click(self, event):
-        if event.button != 3 or event.inaxes is None:
+    def _on_mouse_pan(self, event):
+        """Handle mouse pan with left button drag."""
+        if event.inaxes != self.ax_system:
             return
-        event.inaxes.relim()
-        event.inaxes.autoscale()
-        self.canvas.draw_idle()
+        if event.button != 1:  # Only left button
+            return
+        # Pan logic handled by matplotlib's built-in pan tool
+        pass
+
+    def _on_right_click(self, event):
+        if event.button != 3 or event.inaxes != self.ax_system:
+            return
+        # Reset view to show all surfaces (excluding rays)
+        self._reset_view_to_surfaces()
+
+    def _reset_view_to_surfaces(self):
+        """Reset zoom to show all defined surfaces, excluding rays."""
+        if not self._plot_system or not self._plot_system.surfaces:
+            return
+        
+        # Collect all surface points
+        all_z = []
+        all_r = []
+        for surf in self._plot_system.surfaces:
+            pts = surf.geometry.sample_points()
+            all_z.extend(pts[:, 0])
+            all_r.extend(pts[:, 1])
+            all_r.extend(-pts[:, 1])  # Include symmetric part
+        
+        if all_z and all_r:
+            z_min, z_max = min(all_z), max(all_z)
+            r_min, r_max = min(all_r), max(all_r)
+            
+            # Add padding
+            z_pad = (z_max - z_min) * 0.1 or 1.0
+            r_pad = (r_max - r_min) * 0.1 or 1.0
+            
+            self.ax_system.set_xlim(z_min - z_pad, z_max + z_pad)
+            self.ax_system.set_ylim(r_min - r_pad, r_max + r_pad)
+            self.canvas.draw_idle()
 
     # ─ Export and analysis ────────────────────────────────────────────────────
     def _export_dxf(self):
@@ -1643,7 +1677,7 @@ class OpenTIRApp(ctk.CTk):
                 
                 # Plot system
                 if self._last_traces and self._plot_system:
-                    plot_system(self._plot_system, self._last_traces, ax=ax_sys, linewidth_power=True)
+                    plot_system(self._plot_system, self._last_traces, ax_sys, linewidth_power=True)
                     ax_sys.set_title("System Layout", color="black", fontsize=14, fontweight='bold')
                     
                     # Add lens descriptions

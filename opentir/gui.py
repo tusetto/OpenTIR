@@ -1658,13 +1658,27 @@ class OpenTIRApp(ctk.CTk):
             return
         try:
             with PdfPages(path) as pdf:
-                # Save each tab's figure
+                # Save each tab's figure with white background
                 for fig, title in [
                     (self.fig_illum, "Illuminamento"),
                     (self.fig_iso, "Distribuzione"),
                     (self.fig_iso_detail, "Isofote"),
                     (self.fig_lee, "LEE Breakdown")
                 ]:
+                    # Imposta sfondo bianco per la figura e gli assi
+                    fig.set_facecolor("white")
+                    for ax in fig.axes:
+                        ax.set_facecolor("white")
+                        # Imposta colore nero per etichette e tick
+                        ax.tick_params(colors="black")
+                        for label in ax.get_xticklabels() + ax.get_yticklabels():
+                            label.set_color("black")
+                        for spine in ax.spines.values():
+                            spine.set_edgecolor("black")
+                        # Imposta colore nero per le etichette degli assi
+                        ax.xaxis.label.set_color("black")
+                        ax.yaxis.label.set_color("black")
+                        ax.title.set_color("black")
                     pdf.savefig(fig, bbox_inches='tight')
             messagebox.showinfo("Esportato", f"Risultati salvati in:\n{path}")
         except Exception as exc:
@@ -1734,13 +1748,27 @@ class OpenTIRApp(ctk.CTk):
                 
                 pdf.savefig(fig_system, bbox_inches='tight')
                 
-                # Pages 2-6: The 5 analysis tabs
+                # Pages 2-6: The 5 analysis tabs - all with white background
                 for fig, title in [
                     (self.fig_illum, "Illuminamento"),
                     (self.fig_iso, "Distribuzione"),
                     (self.fig_iso_detail, "Isofote"),
                     (self.fig_lee, "LEE Breakdown")
                 ]:
+                    # Imposta sfondo bianco per la figura e gli assi
+                    fig.set_facecolor("white")
+                    for ax in fig.axes:
+                        ax.set_facecolor("white")
+                        # Imposta colore nero per etichette e tick
+                        ax.tick_params(colors="black")
+                        for label in ax.get_xticklabels() + ax.get_yticklabels():
+                            label.set_color("black")
+                        for spine in ax.spines.values():
+                            spine.set_edgecolor("black")
+                        # Imposta colore nero per le etichette degli assi
+                        ax.xaxis.label.set_color("black")
+                        ax.yaxis.label.set_color("black")
+                        ax.title.set_color("black")
                     pdf.savefig(fig, bbox_inches='tight')
                     
             messagebox.showinfo("Esportato", f"Report completo salvato in:\n{path}")

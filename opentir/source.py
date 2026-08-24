@@ -76,18 +76,20 @@ class LEDSource:
             return np.linspace(-half, half, n).tolist()
 
         elif shape == "circle":
-            # Vogel (sunflower) spiral — good uniform coverage
-            # total n_les points inside a circle of radius = half
+            # Distribuzione uniforme di punti su un cerchio
+            # n_les punti totali disposti equidistanti su cerchi concentrici
             n = max(1, self.n_les)
             if n == 1:
                 return [0.0]
-            golden_angle = np.pi * (3.0 - np.sqrt(5.0))
-            r_offsets = []
-            for i in range(n):
-                r_norm = np.sqrt((i + 0.5) / n)   # radius in [0, 1]
-                theta_i = i * golden_angle          # azimuthal angle
-                # project onto the meridian plane: use the x-component
-                r_offsets.append(half * r_norm * np.cos(theta_i))
+            
+            # Per una LES circolare nel piano meridiano 2D (z, r),
+            # disponiamo i punti in modo equidistante lungo il diametro
+            # Questo rappresenta la proiezione delle sotto-sorgenti sulla sezione
+            half = self.les_size / 2.0
+            
+            # Genera n punti equidistanti lungo il diametro [-half, +half]
+            r_offsets = np.linspace(-half, half, n).tolist()
+            
             return r_offsets
 
         else:

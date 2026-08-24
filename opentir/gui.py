@@ -1055,6 +1055,31 @@ class OpenTIRApp(ctk.CTk):
         _btn(proj_frame, "💾 Salva progetto", self._save_project, width=140).pack(side="left", padx=2)
         _btn(proj_frame, "📂 Carica", self._load_project, width=100).pack(side="left", padx=2)
 
+        # Isofote preview frame
+        iso_preview_frame = ctk.CTkFrame(parent, fg_color=BG_DARK, corner_radius=8, height=280)
+        iso_preview_frame.pack(fill="x", padx=8, pady=(8, 8))
+        iso_preview_frame.pack_propagate(False)
+
+        _lbl(iso_preview_frame, "Anteprima Isofote", font=FONT_BOLD).pack(padx=8, pady=(6, 2), anchor="w")
+
+        self.fig_iso_preview = Figure(facecolor="#1e1e1e", dpi=80, figsize=(4, 3))
+        self.ax_iso_preview = self.fig_iso_preview.add_subplot(1, 1, 1)
+        self._style_ax(self.ax_iso_preview)
+        self.ax_iso_preview.set_title("Isofote preview")
+
+        self.canvas_iso_preview = FigureCanvasTkAgg(self.fig_iso_preview, master=iso_preview_frame)
+        self.canvas_iso_preview.get_tk_widget().pack(fill="both", expand=True, padx=4, pady=4)
+
+        # Export buttons for isofote preview
+        iso_btn_frame = ctk.CTkFrame(iso_preview_frame, fg_color="transparent")
+        iso_btn_frame.pack(fill="x", padx=4, pady=4)
+        _btn(iso_btn_frame, "📄 PDF", lambda: self._export_figure(self.fig_iso_preview, "isofote_preview"), width=80,
+             fg_color="#2a4a6a").pack(side="left", padx=2)
+        _btn(iso_btn_frame, "🖼 PNG", lambda: self._export_figure_png(self.fig_iso_preview, "isofote_preview"), width=70,
+             fg_color="#3a5a3a").pack(side="left", padx=2)
+        _btn(iso_btn_frame, "🔍 Apri", self._show_isophote, width=70,
+             fg_color="#5a3a2a").pack(side="left", padx=2)
+
     def _build_analysis_panel(self, parent):
         # Illuminance histogram
         hist_frame = ctk.CTkFrame(parent, fg_color=BG_DARK, corner_radius=8, height=220)
@@ -1423,6 +1448,47 @@ class OpenTIRApp(ctk.CTk):
 
         plot_lee_pie(self._last_lee, ax=self.ax_lee, dark=True)
 
+        # Isofote preview
+        self.ax_iso_preview.clear()
+        self._style_ax(self.ax_iso_preview)
+        self.ax_iso_preview.set_title("Isofote preview")
+        
+        if self._last_traces:
+            r_hits_iso, powers_iso = get_hit_points(
+                self._last_traces,
+                target_name=targets[0] if targets else None)
+            
+            if len(r_hits_iso) >= 3:
+                n_az = 64
+                thetas = np.linspace(0, 2 * np.pi, n_az, endpoint=False)
+                x_all, y_all, w_all = [], [], []
+                for r, p in zip(r_hits_iso, powers_iso):
+                    xs = r * np.cos(thetas)
+                    ys = r * np.sin(thetas)
+                    x_all.extend(xs)
+                    y_all.extend(ys)
+                    w_all.extend([p / n_az] * n_az)
+
+                x_all = np.array(x_all)
+                y_all = np.array(y_all)
+                w_all = np.array(w_all)
+
+                lim = max(abs(r_hits_iso).max() * 1.05, 1.0)
+                n_bins = 40
+                edges = np.linspace(-lim, lim, n_bins + 1)
+                H, xedg, yedg = np.histogram2d(x_all, y_all, bins=edges, weights=w_all)
+                xc = 0.5 * (xedg[:-1] + xedg[1:])
+                yc = 0.5 * (yedg[:-1] + yedg[1:])
+                XX, YY = np.meshgrid(xc, yc)
+                ZZ = gaussian_filter(H.T, sigma=1.5)
+
+                cf = self.ax_iso_preview.contourf(XX, YY, ZZ, levels=12, cmap="inferno")
+                cs = self.ax_iso_preview.contour(XX, YY, ZZ, levels=12, colors="white", linewidths=0.5, alpha=0.6)
+                self.ax_iso_preview.clabel(cs, inline=True, fontsize=7, fmt=lambda v: f"{v:.2e}", colors="white")
+                self.ax_iso_preview.set_xlabel("x [mm]", color="white")
+                self.ax_iso_preview.set_ylabel("y [mm]", color="white")
+                self.ax_iso_preview.set_aspect("equal")
+
         self.figure.tight_layout(pad=1.5)
         self.canvas.draw_idle()
         self.fig_illum.tight_layout()
@@ -1431,6 +1497,8 @@ class OpenTIRApp(ctk.CTk):
         self.canvas_iso.draw_idle()
         self.fig_lee.tight_layout()
         self.canvas_lee.draw_idle()
+        self.fig_iso_preview.tight_layout()
+        self.canvas_iso_preview.draw_idle()
 
     def _draw_lens_fills(self, ax):
         if not hasattr(self, "_lens_fill_data"):

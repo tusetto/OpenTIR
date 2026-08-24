@@ -91,19 +91,20 @@ def chromatic_rays(base_rays, wavelengths):
     base_rays   : list of Ray objects (from LEDSource.generate_rays())
     wavelengths : list of wavelengths in nm
 
-    Returns a list of (wavelength_nm, Ray) tuples, preserving the
-    original rays' origin, direction and power for each wavelength.
+    Returns a list of Ray objects, each with its own wavelength_nm attribute.
+    The power is divided equally among the wavelengths.
     """
     from .optics import Ray
     result = []
+    n_wl = len(wavelengths)
     for wl in wavelengths:
         for ray in base_rays:
             new_ray = Ray(
                 origin=ray.origin.copy(),
                 direction=ray.direction.copy(),
-                power=ray.power,
+                power=ray.power / n_wl,  # divide power among wavelengths
                 medium=ray.medium,
                 wavelength_nm=wl,
             )
-            result.append((wl, new_ray))
+            result.append(new_ray)
     return result

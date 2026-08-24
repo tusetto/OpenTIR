@@ -22,12 +22,13 @@ from .materials import AIR
 
 
 class Ray:
-    def __init__(self, origin, direction, power=1.0, medium=None):
+    def __init__(self, origin, direction, power=1.0, medium=None, wavelength_nm=None):
         self.origin = np.array(origin, dtype=float)
         d = np.array(direction, dtype=float)
         self.direction = d / np.linalg.norm(d)
         self.power = power
         self.medium = medium if medium is not None else AIR
+        self.wavelength_nm = wavelength_nm  # in nanometers, None for non-chromatic
 
 
 # ---------------------------------------------------------------------
@@ -180,12 +181,14 @@ class OpticalSystem:
     def _trace(self, ray, path, depth, max_bounces, min_power):
         if depth >= max_bounces or ray.power < min_power:
             endpoint = ray.origin + ray.direction * 1e2
-            return [{"path": path + [endpoint], "hits": [], "power": ray.power}]
+            return [{"path": path + [endpoint], "hits": [], "power": ray.power,
+                     "wavelength_nm": getattr(ray, 'wavelength_nm', None)}]
 
         best, surface = self._closest_hit(ray)
         if best is None:
             endpoint = ray.origin + ray.direction * 1e3
-            return [{"path": path + [endpoint], "hits": [], "power": ray.power}]
+            return [{"path": path + [endpoint], "hits": [], "power": ray.power,
+                     "wavelength_nm": getattr(ray, 'wavelength_nm', None)}]
 
         t, point, normal = best
         new_path = path + [point]
@@ -193,26 +196,31 @@ class OpticalSystem:
         if surface == self.AXIS:
             folded_dir = ray.direction.copy()
             folded_dir[1] = -folded_dir[1]
-            folded_ray = Ray(point, folded_dir, ray.power, medium=ray.medium)
+            folded_ray = Ray(point, folded_dir, ray.power, medium=ray.medium,
+                             wavelength_nm=getattr(ray, 'wavelength_nm', None))
             return self._trace(folded_ray, new_path, depth + 1, max_bounces, min_power)
 
         if surface.kind == "mirror":
             new_dir = reflect(ray.direction, normal)
-            new_ray = Ray(point, new_dir, ray.power, medium=ray.medium)
+            new_ray = Ray(point, new_dir, ray.power, medium=ray.medium,
+                          wavelength_nm=getattr(ray, 'wavelength_nm', None))
             return self._trace(new_ray, new_path, depth + 1, max_bounces, min_power)
 
         elif surface.kind == "target":
-            return [{"path": new_path, "hits": [(surface, point)], "power": ray.power}]
+            return [{"path": new_path, "hits": [(surface, point)], "power": ray.power,
+                     "wavelength_nm": getattr(ray, 'wavelength_nm', None)}]
 
         elif surface.kind == "block":
-            return [{"path": new_path, "hits": [], "power": ray.power}]
+            return [{"path": new_path, "hits": [], "power": ray.power,
+                     "wavelength_nm": getattr(ray, 'wavelength_nm', None)}]
 
         elif surface.kind == "refract":
             return self._trace_refract(ray, surface, point, normal, new_path,
                                         depth, max_bounces, min_power)
 
         else:
-            return [{"path": new_path, "hits": [], "power": ray.power}]
+            return [{"path": new_path, "hits": [], "power": ray.power,
+                     "wavelength_nm": getattr(ray, 'wavelength_nm', None)}]
 
     def _trace_refract(self, ray, surface, point, normal, new_path,
                         depth, max_bounces, min_power):
@@ -227,27 +235,38 @@ class OpticalSystem:
             mat_from, mat_to = surface.material_in, surface.material_out
             n_use = -normal
 
-        result = snell_refract(d, n_use, mat_from.n, mat_to.n)
+        # Get refractive indices - use wavelength-dependent values if available
+        wl = getattr(ray, 'wavelength_nm', None)
+        if wl is not None and hasattr(mat_from, 'n_at'):
+            n1 = mat_from.n_at(wl)
+        else:
+            n1 = mat_from.n
+        if wl is not None and hasattr(mat_to, 'n_at'):
+            n2 = mat_to.n_at(wl)
+        else:
+            n2 = mat_to.n
+
+        result = snell_refract(d, n_use, n1, n2)
 
         branches = []
         if result is None:
             # Total internal reflection: 100% of the power is reflected
             refl_dir = reflect(d, n_use)
-            refl_ray = Ray(point, refl_dir, ray.power, medium=mat_from)
+            refl_ray = Ray(point, refl_dir, ray.power, medium=mat_from, wavelength_nm=wl)
             branches = self._trace(refl_ray, new_path, depth + 1, max_bounces, min_power)
         else:
             d_t, cos_i, cos_t = result
-            R = fresnel_reflectance(cos_i, cos_t, mat_from.n, mat_to.n)
+            R = fresnel_reflectance(cos_i, cos_t, n1, n2)
             refl_power = ray.power * R
             trans_power = ray.power * (1.0 - R)
 
             if refl_power >= min_power and depth + 1 < max_bounces:
                 refl_dir = reflect(d, n_use)
-                refl_ray = Ray(point, refl_dir, refl_power, medium=mat_from)
+                refl_ray = Ray(point, refl_dir, refl_power, medium=mat_from, wavelength_nm=wl)
                 branches += self._trace(refl_ray, new_path, depth + 1, max_bounces, min_power)
 
             if trans_power >= min_power and depth + 1 < max_bounces:
-                trans_ray = Ray(point, d_t, trans_power, medium=mat_to)
+                trans_ray = Ray(point, d_t, trans_power, medium=mat_to, wavelength_nm=wl)
                 branches += self._trace(trans_ray, new_path, depth + 1, max_bounces, min_power)
 
             if not branches:

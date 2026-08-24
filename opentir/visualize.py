@@ -7,9 +7,12 @@ Matplotlib-based plotting for release 0.1 (no GUI yet).
 import matplotlib.pyplot as plt
 import numpy as np
 
+from .chromatic import wavelength_to_rgb
+
 
 def plot_system(system, traces=None, ax=None, show_axis=True,
-                 title="OpenTIR - 2D geometric ray trace"):
+                 title="OpenTIR - 2D geometric ray trace",
+                 chromatic=False, use_power_thickness=True):
     if ax is None:
         _, ax = plt.subplots(figsize=(8, 6))
 
@@ -26,7 +29,27 @@ def plot_system(system, traces=None, ax=None, show_axis=True,
     if traces:
         for trace in traces:
             path = np.array(trace["path"])
-            ax.plot(path[:, 0], path[:, 1], color="orange", linewidth=0.6, alpha=0.7)
+            
+            # Check if this trace has wavelength information (chromatic mode)
+            wl = trace.get("wavelength_nm", None)
+            
+            if chromatic and wl is not None:
+                # Use wavelength-based color for chromatic mode
+                ray_color = wavelength_to_rgb(wl)
+            else:
+                # Default orange color for non-chromatic mode
+                ray_color = "orange"
+            
+            # Calculate line width based on power if requested
+            if use_power_thickness:
+                power = trace.get("power", 1.0)
+                # Scale linewidth: min 0.3, max 3.0, proportional to sqrt of power
+                # Normalize assuming max power ~1.0
+                linewidth = 0.3 + 2.7 * min(1.0, np.sqrt(power))
+            else:
+                linewidth = 0.6
+            
+            ax.plot(path[:, 0], path[:, 1], color=ray_color, linewidth=linewidth, alpha=0.7)
 
     if show_axis:
         ax.axhline(0, color="gray", linestyle="--", linewidth=0.7)

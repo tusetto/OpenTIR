@@ -26,6 +26,7 @@ from .optics import Surface, OpticalSystem, critical_angle
 from .source import LEDSource
 from .visualize import plot_system, plot_illuminance
 from .profiles import build_conic_profile, build_freeform_profile, profile_to_surfaces
+from .chromatic import wavelength_samples, chromatic_rays
 
 MATERIAL_PRESETS = {
     "Aria (n=1.00)": AIR,

@@ -1085,7 +1085,16 @@ class OpenTIRApp(ctk.CTk):
         self.canvas_iso = FigureCanvasTkAgg(self.fig_iso, master=tab_dist)
         self.canvas_iso.get_tk_widget().pack(fill="both", expand=True, padx=4, pady=4)
         
-        # Tab 3: Isofote
+        # Tab 3: Isofote Preview
+        tab_iso_preview = self.analysis_tabs.add("Isofote Preview")
+        self.fig_iso_preview = Figure(facecolor="#1e1e1e", dpi=80, figsize=(4, 3))
+        self.ax_iso_preview = self.fig_iso_preview.add_subplot(1, 1, 1)
+        self._style_ax(self.ax_iso_preview)
+        self.ax_iso_preview.set_title("Isofote preview")
+        self.canvas_iso_preview = FigureCanvasTkAgg(self.fig_iso_preview, master=tab_iso_preview)
+        self.canvas_iso_preview.get_tk_widget().pack(fill="both", expand=True, padx=4, pady=4)
+        
+        # Tab 4: Isofote Detail
         tab_iso_detail = self.analysis_tabs.add("Isofote")
         self.fig_iso_detail = Figure(facecolor="#1e1e1e", dpi=80, figsize=(4, 3))
         self.ax_iso_detail = self.fig_iso_detail.add_subplot(1, 1, 1)
@@ -1094,7 +1103,7 @@ class OpenTIRApp(ctk.CTk):
         self.canvas_iso_detail = FigureCanvasTkAgg(self.fig_iso_detail, master=tab_iso_detail)
         self.canvas_iso_detail.get_tk_widget().pack(fill="both", expand=True, padx=4, pady=4)
         
-        # Tab 4: LEE Breakdown
+        # Tab 5: LEE Breakdown
         tab_lee = self.analysis_tabs.add("LEE Breakdown")
         self.fig_lee = Figure(facecolor="#1e1e1e", dpi=80, figsize=(4, 3))
         self.ax_lee = self.fig_lee.add_subplot(1, 1, 1)
@@ -1748,10 +1757,11 @@ class OpenTIRApp(ctk.CTk):
                 
                 pdf.savefig(fig_system, bbox_inches='tight')
                 
-                # Pages 2-5: The 4 analysis tabs
+                # Pages 2-6: The 5 analysis tabs
                 for fig, title in [
                     (self.fig_illum, "Illuminamento"),
                     (self.fig_iso, "Distribuzione"),
+                    (self.fig_iso_preview, "Isofote Preview"),
                     (self.fig_iso_detail, "Isofote"),
                     (self.fig_lee, "LEE Breakdown")
                 ]:

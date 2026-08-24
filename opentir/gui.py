@@ -692,7 +692,7 @@ class LEDSourcePanel(ctk.CTkToplevel):
     def __init__(self, master, on_save, source_def=None):
         super().__init__(master)
         self.title("Sorgente LED")
-        self.geometry("380x750")
+        self.geometry("380x820")
         self.resizable(True, True)
         self.grab_set()
         self.on_save = on_save
@@ -966,10 +966,10 @@ class OpenTIRApp(ctk.CTk):
         self.auto_update_var = tk.BooleanVar(value=True)
         self.enable_chromatic_var = tk.BooleanVar(value=False)
         self.chromatic_n_rays = tk.StringVar(value="5")
-        ctk.CTkCheckBox(top_bar, text="N. lunghezze d'onda:", font=FONT_SMALL).pack(side="left", padx=(10, 2))
-        _entry(top_bar, self.chromatic_n_rays, width=40).pack(side="left", padx=2)
         ctk.CTkCheckBox(top_bar, text="Simula dispersione cromatica",
                        variable=self.enable_chromatic_var, font=FONT_SMALL).pack(side="left", padx=10)
+        ctk.CTkLabel(top_bar, text="N. lunghezze d'onda:", font=FONT_SMALL).pack(side="left", padx=(0, 2))
+        _entry(top_bar, self.chromatic_n_rays, width=40).pack(side="left", padx=2)
         ctk.CTkCheckBox(top_bar, text="Auto-aggiornamento",
                        variable=self.auto_update_var, font=FONT_SMALL).pack(side="left", padx=10)
 
@@ -1109,6 +1109,16 @@ class OpenTIRApp(ctk.CTk):
              fg_color="#5a3a2a").pack(side="left", padx=2)
         _btn(exp_frame, "📊 LEE", self._show_lee, width=80,
              fg_color="#3a2a5a").pack(side="left", padx=2)
+        
+        # PDF/PNG export buttons for result windows
+        _btn(exp_frame, "📄 PDF/Iso", lambda: self._export_figure(self.fig_iso, "illuminamento"), width=90,
+             fg_color="#2a4a6a").pack(side="left", padx=2)
+        _btn(exp_frame, "📄 PNG/Iso", lambda: self._export_figure_png(self.fig_iso, "illuminamento"), width=80,
+             fg_color="#3a5a3a").pack(side="left", padx=2)
+        _btn(exp_frame, "📄 PDF/LEE", lambda: self._export_figure(self.fig_lee, "lee"), width=80,
+             fg_color="#2a4a6a").pack(side="left", padx=2)
+        _btn(exp_frame, "📄 PNG/LEE", lambda: self._export_figure_png(self.fig_lee, "lee"), width=80,
+             fg_color="#3a5a3a").pack(side="left", padx=2)
 
     def _style_ax(self, ax):
         ax.set_facecolor("#252526")
@@ -1475,6 +1485,36 @@ class OpenTIRApp(ctk.CTk):
         except Exception as exc:
             messagebox.showerror("Errore export DXF", str(exc))
 
+    def _export_figure(self, fig, name_prefix):
+        """Export a matplotlib figure to PDF format."""
+        from tkinter import filedialog
+        path = filedialog.asksaveasfilename(
+            defaultextension=".pdf",
+            filetypes=[("PDF Document", "*.pdf"), ("PNG Image", "*.png")],
+            initialfile=f"{name_prefix}_opentir.pdf")
+        if not path:
+            return
+        try:
+            fig.savefig(path, dpi=150, bbox_inches='tight')
+            messagebox.showinfo("Esportato", f"Grafico salvato in:\n{path}")
+        except Exception as exc:
+            messagebox.showerror("Errore export", str(exc))
+
+    def _export_figure_png(self, fig, name_prefix):
+        """Export a matplotlib figure to PNG format."""
+        from tkinter import filedialog
+        path = filedialog.asksaveasfilename(
+            defaultextension=".png",
+            filetypes=[("PNG Image", "*.png")],
+            initialfile=f"{name_prefix}_opentir.png")
+        if not path:
+            return
+        try:
+            fig.savefig(path, dpi=300, bbox_inches='tight', facecolor=fig.get_facecolor())
+            messagebox.showinfo("Esportato", f"Grafico salvato in:\n{path}")
+        except Exception as exc:
+            messagebox.showerror("Errore export", str(exc))
+
     def _show_isophote(self):
         if not self._last_traces:
             messagebox.showwarning("Attenzione", "Esegui prima una simulazione.")
@@ -1537,6 +1577,12 @@ class OpenTIRApp(ctk.CTk):
         canvas_iso = FigureCanvasTkAgg(fig_iso, master=win)
         canvas_iso.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
         NavigationToolbar2Tk(canvas_iso, win, pack_toolbar=False).pack(side="bottom", fill="x", padx=10)
+        
+        # Add PDF/PNG export buttons to the window
+        exp_btn_frame = ctk.CTkFrame(win, fg_color="transparent")
+        exp_btn_frame.pack(fill="x", padx=10, pady=5)
+        _btn(exp_btn_frame, "💾 Salva PDF", lambda: self._export_figure(fig_iso, "illuminamento"), width=120).pack(side="left", padx=5)
+        _btn(exp_btn_frame, "🖼 Salva PNG", lambda: self._export_figure_png(fig_iso, "illuminamento"), width=120, fg_color="#3a5a3a").pack(side="left", padx=5)
 
     def _show_lee(self):
         if not self._last_traces or self._last_lee is None:
@@ -1560,6 +1606,12 @@ class OpenTIRApp(ctk.CTk):
         canvas_lee = FigureCanvasTkAgg(fig_lee, master=win)
         canvas_lee.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
         NavigationToolbar2Tk(canvas_lee, win, pack_toolbar=False).pack(side="bottom", fill="x", padx=10)
+        
+        # Add PDF/PNG export buttons to the window
+        exp_btn_frame = ctk.CTkFrame(win, fg_color="transparent")
+        exp_btn_frame.pack(fill="x", padx=10, pady=5)
+        _btn(exp_btn_frame, "💾 Salva PDF", lambda: self._export_figure(fig_lee, "lee"), width=120).pack(side="left", padx=5)
+        _btn(exp_btn_frame, "🖼 Salva PNG", lambda: self._export_figure_png(fig_lee, "lee"), width=120, fg_color="#3a5a3a").pack(side="left", padx=5)
 
     # ── Project management ─────────────────────────────────────────────────────
     def _save_project(self):

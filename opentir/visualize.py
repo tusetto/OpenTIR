@@ -27,6 +27,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
+from .chromatic import wavelength_to_rgb
+
 # Qualitative colour cycle – 10 distinct colours
 _SURF_COLORS = [
     "#e6194b", "#3cb44b", "#4363d8", "#f58231",

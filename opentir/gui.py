@@ -692,7 +692,7 @@ class LEDSourcePanel(ctk.CTkToplevel):
     def __init__(self, master, on_save, source_def=None):
         super().__init__(master)
         self.title("Sorgente LED")
-        self.geometry("380x680")
+        self.geometry("380x750")
         self.resizable(True, True)
         self.grab_set()
         self.on_save = on_save
@@ -965,6 +965,9 @@ class OpenTIRApp(ctk.CTk):
 
         self.auto_update_var = tk.BooleanVar(value=True)
         self.enable_chromatic_var = tk.BooleanVar(value=False)
+        self.chromatic_n_rays = tk.StringVar(value="5")
+        ctk.CTkCheckBox(top_bar, text="N. lunghezze d'onda:", font=FONT_SMALL).pack(side="left", padx=(10, 2))
+        _entry(top_bar, self.chromatic_n_rays, width=40).pack(side="left", padx=2)
         ctk.CTkCheckBox(top_bar, text="Simula dispersione cromatica",
                        variable=self.enable_chromatic_var, font=FONT_SMALL).pack(side="left", padx=10)
         ctk.CTkCheckBox(top_bar, text="Auto-aggiornamento",
@@ -1310,6 +1313,17 @@ class OpenTIRApp(ctk.CTk):
 
             base_rays = source.generate_rays()
             self._last_source = source
+
+            # Chromatic dispersion: expand rays by wavelength if enabled
+            if self.enable_chromatic_var.get():
+                try:
+                    n_wl = max(1, int(self.chromatic_n_rays.get()))
+                except ValueError:
+                    n_wl = 5
+                wavelengths = wavelength_samples(n_wl)
+                chromatic_ray_list = chromatic_rays(base_rays, wavelengths)
+                # Extract just the Ray objects for tracing
+                base_rays = [ray for (_, ray) in chromatic_ray_list]
 
             max_b = int(self.max_bounces.get())
             min_p = float(self.min_power.get())

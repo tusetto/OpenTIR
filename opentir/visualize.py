@@ -124,7 +124,12 @@ def plot_system(system, traces=None, ax=None, show_axis=True,
         
         for trace in traces:
             is_refl = trace.get("reflected", False)
-            color   = trace.get("_color", "orange")
+            # Get wavelength from trace and compute color for chromatic display
+            wl_nm = trace.get("wavelength_nm", None)
+            if wl_nm is not None:
+                color = wavelength_to_rgb(wl_nm)
+            else:
+                color = trace.get("_color", "orange")
             path    = np.array(trace["path"])
             power   = trace.get("power", 1.0)
             

@@ -1063,9 +1063,9 @@ class OpenTIRApp(ctk.CTk):
              fg_color="#2a6a4a").pack(side="left", padx=2)
 
     def _build_analysis_panel(self, parent):
-        # Tab widget per i 4 grafici
+        # Tab widget per i 4 grafici - senza expand=True per lasciare spazio ai bottoni
         self.analysis_tabs = ctk.CTkTabview(parent)
-        self.analysis_tabs.pack(fill="both", expand=True, padx=8, pady=8)
+        self.analysis_tabs.pack(fill="both", expand=True, padx=8, pady=(8, 4))
         
         # Tab 1: Illuminamento
         tab_illum = self.analysis_tabs.add("Illuminamento")
@@ -1103,15 +1103,21 @@ class OpenTIRApp(ctk.CTk):
         self.canvas_lee = FigureCanvasTkAgg(self.fig_lee, master=tab_lee)
         self.canvas_lee.get_tk_widget().pack(fill="both", expand=True, padx=4, pady=4)
         
-        # Export buttons sotto i tab
+        # Export buttons sotto i tab - frame separato per assicurare visibilità
         exp_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        exp_frame.pack(fill="x", padx=8, pady=4)
-        _btn(exp_frame, "💾 Save Complete Report", self._save_complete_report, width=160,
-             fg_color="#2a5a8a").pack(side="left", padx=2)
-        _btn(exp_frame, "📄 Save PDF", self._save_results_pdf, width=100,
-             fg_color="#2a4a6a").pack(side="left", padx=2)
-        _btn(exp_frame, "🖼 Save PNG", self._save_results_png, width=100,
-             fg_color="#3a5a3a").pack(side="left", padx=2)
+        exp_frame.pack(fill="x", padx=8, pady=(4, 8))
+        
+        btn_save_all = _btn(exp_frame, "💾 Save Complete Report", self._save_complete_report, 
+                           width=160, fg_color="#2a5a8a")
+        btn_save_all.pack(side="left", padx=2, pady=2)
+        
+        btn_pdf = _btn(exp_frame, "📄 Save PDF", self._save_results_pdf, 
+                      width=100, fg_color="#2a4a6a")
+        btn_pdf.pack(side="left", padx=2, pady=2)
+        
+        btn_png = _btn(exp_frame, "🖼 Save PNG", self._save_results_png, 
+                      width=100, fg_color="#3a5a3a")
+        btn_png.pack(side="left", padx=2, pady=2)
 
     def _style_ax(self, ax):
         ax.set_facecolor("#252526")

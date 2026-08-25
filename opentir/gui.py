@@ -1069,7 +1069,7 @@ class OpenTIRApp(ctk.CTk):
         
         # Tab 1: Illuminamento
         tab_illum = self.analysis_tabs.add("Illuminamento")
-        self.fig_illum = Figure(facecolor="#1e1e1e", dpi=80, figsize=(4, 3))
+        self.fig_illum = Figure(facecolor="#1e1e1e", dpi=80, figsize=(8.27, 11.69))  # A4 size
         self.ax_illum = self.fig_illum.add_subplot(1, 1, 1)
         self._style_ax(self.ax_illum)
         self.ax_illum.set_title("Illuminance distribution")
@@ -1078,7 +1078,7 @@ class OpenTIRApp(ctk.CTk):
         
         # Tab 2: Distribuzione
         tab_dist = self.analysis_tabs.add("Distribuzione")
-        self.fig_iso = Figure(facecolor="#1e1e1e", dpi=80, figsize=(4, 3))
+        self.fig_iso = Figure(facecolor="#1e1e1e", dpi=80, figsize=(8.27, 11.69))  # A4 size
         self.ax_iso = self.fig_iso.add_subplot(1, 1, 1)
         self._style_ax(self.ax_iso)
         self.ax_iso.set_title("Radial distribution")
@@ -1087,7 +1087,7 @@ class OpenTIRApp(ctk.CTk):
         
         # Tab 3: Isofote Detail
         tab_iso_detail = self.analysis_tabs.add("Isofote")
-        self.fig_iso_detail = Figure(facecolor="#1e1e1e", dpi=80, figsize=(4, 3))
+        self.fig_iso_detail = Figure(facecolor="#1e1e1e", dpi=80, figsize=(8.27, 11.69))  # A4 size
         self.ax_iso_detail = self.fig_iso_detail.add_subplot(1, 1, 1)
         self._style_ax(self.ax_iso_detail)
         self.ax_iso_detail.set_title("Isofote detail")
@@ -1096,7 +1096,7 @@ class OpenTIRApp(ctk.CTk):
         
         # Tab 5: LEE Breakdown
         tab_lee = self.analysis_tabs.add("LEE Breakdown")
-        self.fig_lee = Figure(facecolor="#1e1e1e", dpi=80, figsize=(4, 3))
+        self.fig_lee = Figure(facecolor="#1e1e1e", dpi=80, figsize=(8.27, 11.69))  # A4 size
         self.ax_lee = self.fig_lee.add_subplot(1, 1, 1)
         self._style_ax(self.ax_lee)
         self.ax_lee.set_title("LEE Breakdown")
@@ -1480,11 +1480,20 @@ class OpenTIRApp(ctk.CTk):
     def _draw_lens_fills(self, ax):
         if not hasattr(self, "_lens_fill_data"):
             return
+        handles = []
+        labels = []
         for f_pts, r_pts, color in self._lens_fill_data:
             upper_z = np.concatenate([f_pts[:, 0], r_pts[::-1, 0]])
             upper_r = np.concatenate([f_pts[:, 1], r_pts[::-1, 1]])
-            ax.fill(upper_z, upper_r, color=color, alpha=LENS_FILL_ALPHA, zorder=1)
-            ax.fill(upper_z, -upper_r, color=color, alpha=LENS_FILL_ALPHA, zorder=1)
+            fill_front = ax.fill(upper_z, upper_r, color=color, alpha=LENS_FILL_ALPHA, zorder=3, label="Fronte lente")
+            fill_back = ax.fill(upper_z, -upper_r, color=color, alpha=LENS_FILL_ALPHA, zorder=3, label="Retro lente")
+            handles.append(fill_front[0])
+            labels.append("Fronte")
+            handles.append(fill_back[0])
+            labels.append("Retro")
+        # Add legend for lens fills if there are any
+        if handles:
+            ax.legend(handles, labels, loc="best", fontsize=8)
 
     # ── Event handlers ─────────────────────────────────────────────────────────
     def _on_scroll(self, event):
@@ -1721,7 +1730,7 @@ class OpenTIRApp(ctk.CTk):
         try:
             with PdfPages(path) as pdf:
                 # Page 1: System layout with lens description
-                fig_system = Figure(figsize=(8.5, 11), facecolor="white", dpi=100)
+                fig_system = Figure(figsize=(8.27, 11.69), facecolor="white", dpi=100)  # A4 size
                 ax_sys = fig_system.add_subplot(1, 1, 1)
                 ax_sys.set_facecolor("white")
                 
@@ -1793,13 +1802,13 @@ class OpenTIRApp(ctk.CTk):
         win.title("Isofote – distribuzione di illuminamento")
         win.geometry("700x600")
 
-        fig_iso = Figure(figsize=(7, 5.5), facecolor="#1e1e1e", dpi=100)
+        fig_iso = Figure(figsize=(8.27, 11.69), facecolor="white", dpi=100)  # A4 size at 100 dpi
         ax_iso = fig_iso.add_subplot(1, 1, 1)
-        ax_iso.set_facecolor("#252526")
-        ax_iso.tick_params(colors="white")
-        ax_iso.xaxis.label.set_color("white")
-        ax_iso.yaxis.label.set_color("white")
-        ax_iso.title.set_color("white")
+        ax_iso.set_facecolor("white")
+        ax_iso.tick_params(colors="black")
+        ax_iso.xaxis.label.set_color("black")
+        ax_iso.yaxis.label.set_color("black")
+        ax_iso.title.set_color("black")
 
         n_az = 64
         thetas = np.linspace(0, 2 * np.pi, n_az, endpoint=False)
@@ -1824,14 +1833,18 @@ class OpenTIRApp(ctk.CTk):
         XX, YY = np.meshgrid(xc, yc)
         ZZ = gaussian_filter(H.T, sigma=1.5)
 
-        cf = ax_iso.contourf(XX, YY, ZZ, levels=12, cmap="inferno")
-        cs = ax_iso.contour(XX, YY, ZZ, levels=12, colors="white", linewidths=0.5, alpha=0.6)
-        ax_iso.clabel(cs, inline=True, fontsize=7, fmt=lambda v: f"{v:.2e}", colors="white")
+        cf = ax_iso.contourf(XX, YY, ZZ, levels=20, cmap="inferno")
+        cs = ax_iso.contour(XX, YY, ZZ, levels=12, colors="black", linewidths=0.5, alpha=0.8)
+        ax_iso.clabel(cs, inline=True, fontsize=7, fmt=lambda v: f"{v:.2e}", colors="black")
 
-        fig_iso.colorbar(cf, ax=ax_iso, pad=0.02).set_label("Illuminamento [a.u.]", color="white")
-        ax_iso.set_xlabel("x [mm]", color="white")
-        ax_iso.set_ylabel("y [mm]", color="white")
-        ax_iso.set_title("Isofote", color="white")
+        # Single colorbar with controlled position
+        cbar = fig_iso.colorbar(cf, ax=ax_iso, pad=0.02, shrink=0.8)
+        cbar.set_label("Illuminamento [a.u.]", color="black")
+        cbar.ax.tick_params(colors="black")
+        
+        ax_iso.set_xlabel("x [mm]", color="black")
+        ax_iso.set_ylabel("y [mm]", color="black")
+        ax_iso.set_title("Isofote", color="black")
         ax_iso.set_aspect("equal")
 
         canvas_iso = FigureCanvasTkAgg(fig_iso, master=win)
@@ -1853,7 +1866,7 @@ class OpenTIRApp(ctk.CTk):
         win.title("LEE Breakdown")
         win.geometry("700x500")
 
-        fig_lee = Figure(figsize=(7, 4.5), facecolor="#1e1e1e", dpi=100)
+        fig_lee = Figure(figsize=(8.27, 11.69), facecolor="#1e1e1e", dpi=100)  # A4 size
         ax_pie = fig_lee.add_subplot(1, 2, 1)
         ax_bar = fig_lee.add_subplot(1, 2, 2)
         ax_pie.set_facecolor("#252526")

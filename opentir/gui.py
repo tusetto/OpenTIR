@@ -1063,13 +1063,33 @@ class OpenTIRApp(ctk.CTk):
              fg_color="#2a6a4a").pack(side="left", padx=2)
 
     def _build_analysis_panel(self, parent):
+        # Frame principale per contenere tabs e bottoni
+        main_frame = ctk.CTkFrame(parent, fg_color="transparent")
+        main_frame.pack(fill="both", expand=True, padx=8, pady=8)
+        
+        # Export buttons SOPRA i tab - visibili subito
+        exp_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+        exp_frame.pack(fill="x", expand=False, padx=0, pady=(0, 4))
+        
+        btn_save_all = _btn(exp_frame, "💾 Save Complete Report", self._save_complete_report, 
+                           width=160, fg_color="#2a5a8a")
+        btn_save_all.pack(side="left", padx=4, pady=4)
+        
+        btn_pdf = _btn(exp_frame, "📄 Save PDF (current)", self._save_results_pdf, 
+                      width=140, fg_color="#2a4a6a")
+        btn_pdf.pack(side="left", padx=4, pady=4)
+        
+        btn_png = _btn(exp_frame, "🖼 Save PNG (current)", self._save_results_png, 
+                      width=140, fg_color="#3a5a3a")
+        btn_png.pack(side="left", padx=4, pady=4)
+        
         # Tab widget per i 4 grafici
-        self.analysis_tabs = ctk.CTkTabview(parent)
-        self.analysis_tabs.pack(fill="both", expand=True, padx=8, pady=8)
+        self.analysis_tabs = ctk.CTkTabview(main_frame)
+        self.analysis_tabs.pack(fill="both", expand=True, padx=0, pady=(4, 0))
         
         # Tab 1: Illuminamento
         tab_illum = self.analysis_tabs.add("Illuminamento")
-        self.fig_illum = Figure(facecolor="#1e1e1e", dpi=80, figsize=(4, 3))
+        self.fig_illum = Figure(facecolor="#1e1e1e", dpi=80, figsize=(8.27, 11.69))  # A4 size
         self.ax_illum = self.fig_illum.add_subplot(1, 1, 1)
         self._style_ax(self.ax_illum)
         self.ax_illum.set_title("Illuminance distribution")
@@ -1078,25 +1098,16 @@ class OpenTIRApp(ctk.CTk):
         
         # Tab 2: Distribuzione
         tab_dist = self.analysis_tabs.add("Distribuzione")
-        self.fig_iso = Figure(facecolor="#1e1e1e", dpi=80, figsize=(4, 3))
+        self.fig_iso = Figure(facecolor="#1e1e1e", dpi=80, figsize=(8.27, 11.69))  # A4 size
         self.ax_iso = self.fig_iso.add_subplot(1, 1, 1)
         self._style_ax(self.ax_iso)
         self.ax_iso.set_title("Radial distribution")
         self.canvas_iso = FigureCanvasTkAgg(self.fig_iso, master=tab_dist)
         self.canvas_iso.get_tk_widget().pack(fill="both", expand=True, padx=4, pady=4)
         
-        # Tab 3: Isofote Preview
-        tab_iso_preview = self.analysis_tabs.add("Isofote Preview")
-        self.fig_iso_preview = Figure(facecolor="#1e1e1e", dpi=80, figsize=(4, 3))
-        self.ax_iso_preview = self.fig_iso_preview.add_subplot(1, 1, 1)
-        self._style_ax(self.ax_iso_preview)
-        self.ax_iso_preview.set_title("Isofote preview")
-        self.canvas_iso_preview = FigureCanvasTkAgg(self.fig_iso_preview, master=tab_iso_preview)
-        self.canvas_iso_preview.get_tk_widget().pack(fill="both", expand=True, padx=4, pady=4)
-        
-        # Tab 4: Isofote Detail
+        # Tab 3: Isofote Detail
         tab_iso_detail = self.analysis_tabs.add("Isofote")
-        self.fig_iso_detail = Figure(facecolor="#1e1e1e", dpi=80, figsize=(4, 3))
+        self.fig_iso_detail = Figure(facecolor="#1e1e1e", dpi=80, figsize=(8.27, 11.69))  # A4 size
         self.ax_iso_detail = self.fig_iso_detail.add_subplot(1, 1, 1)
         self._style_ax(self.ax_iso_detail)
         self.ax_iso_detail.set_title("Isofote detail")
@@ -1105,22 +1116,12 @@ class OpenTIRApp(ctk.CTk):
         
         # Tab 5: LEE Breakdown
         tab_lee = self.analysis_tabs.add("LEE Breakdown")
-        self.fig_lee = Figure(facecolor="#1e1e1e", dpi=80, figsize=(4, 3))
+        self.fig_lee = Figure(facecolor="#1e1e1e", dpi=80, figsize=(8.27, 11.69))  # A4 size
         self.ax_lee = self.fig_lee.add_subplot(1, 1, 1)
         self._style_ax(self.ax_lee)
         self.ax_lee.set_title("LEE Breakdown")
         self.canvas_lee = FigureCanvasTkAgg(self.fig_lee, master=tab_lee)
         self.canvas_lee.get_tk_widget().pack(fill="both", expand=True, padx=4, pady=4)
-        
-        # Export buttons sotto i tab
-        exp_frame = ctk.CTkFrame(parent, fg_color="transparent")
-        exp_frame.pack(fill="x", padx=8, pady=4)
-        _btn(exp_frame, "💾 Save Complete Report", self._save_complete_report, width=160,
-             fg_color="#2a5a8a").pack(side="left", padx=2)
-        _btn(exp_frame, "📄 Save PDF", self._save_results_pdf, width=100,
-             fg_color="#2a4a6a").pack(side="left", padx=2)
-        _btn(exp_frame, "🖼 Save PNG", self._save_results_png, width=100,
-             fg_color="#3a5a3a").pack(side="left", padx=2)
 
     def _style_ax(self, ax):
         ax.set_facecolor("#252526")
@@ -1432,11 +1433,6 @@ class OpenTIRApp(ctk.CTk):
 
         plot_lee_pie(self._last_lee, ax=self.ax_lee, dark=True)
 
-        # Isofote preview
-        self.ax_iso_preview.clear()
-        self._style_ax(self.ax_iso_preview)
-        self.ax_iso_preview.set_title("Isofote preview")
-        
         # Isofote detail tab
         self.ax_iso_detail.clear()
         self._style_ax(self.ax_iso_detail)
@@ -1471,21 +1467,14 @@ class OpenTIRApp(ctk.CTk):
                 XX, YY = np.meshgrid(xc, yc)
                 ZZ = gaussian_filter(H.T, sigma=1.5)
 
-                cf = self.ax_iso_preview.contourf(XX, YY, ZZ, levels=12, cmap="inferno")
-                cs = self.ax_iso_preview.contour(XX, YY, ZZ, levels=12, colors="white", linewidths=0.5, alpha=0.6)
-                self.ax_iso_preview.clabel(cs, inline=True, fontsize=7, fmt=lambda v: f"{v:.2e}", colors="white")
-                self.ax_iso_preview.set_xlabel("x [mm]", color="white")
-                self.ax_iso_preview.set_ylabel("y [mm]", color="white")
-                self.ax_iso_preview.set_aspect("equal")
-                
-                # Same plot for detail tab but with higher resolution
+                # Isofote detail with high resolution
                 cf2 = self.ax_iso_detail.contourf(XX, YY, ZZ, levels=20, cmap="inferno")
                 cs2 = self.ax_iso_detail.contour(XX, YY, ZZ, levels=12, colors="white", linewidths=0.5, alpha=0.6)
                 self.ax_iso_detail.clabel(cs2, inline=True, fontsize=8, fmt=lambda v: f"{v:.2e}", colors="white")
                 self.ax_iso_detail.set_xlabel("x [mm]", color="white")
                 self.ax_iso_detail.set_ylabel("y [mm]", color="white")
                 self.ax_iso_detail.set_aspect("equal")
-                self.fig_iso_detail.colorbar(cf2, ax=self.ax_iso_detail, pad=0.02).set_label("Illuminamento [a.u.]", color="white")
+                # No colorbar - only labels on the plot
 
         self.figure.tight_layout(pad=1.5)
         self.canvas.draw_idle()
@@ -1497,17 +1486,27 @@ class OpenTIRApp(ctk.CTk):
         self.canvas_iso_detail.draw_idle()
         self.fig_lee.tight_layout()
         self.canvas_lee.draw_idle()
-        self.fig_iso_preview.tight_layout()
-        self.canvas_iso_preview.draw_idle()
 
     def _draw_lens_fills(self, ax):
         if not hasattr(self, "_lens_fill_data"):
             return
-        for f_pts, r_pts, color in self._lens_fill_data:
+        handles = []
+        labels = []
+        seen_materials = set()
+        for idx, (f_pts, r_pts, color) in enumerate(self._lens_fill_data):
             upper_z = np.concatenate([f_pts[:, 0], r_pts[::-1, 0]])
             upper_r = np.concatenate([f_pts[:, 1], r_pts[::-1, 1]])
-            ax.fill(upper_z, upper_r, color=color, alpha=LENS_FILL_ALPHA, zorder=1)
-            ax.fill(upper_z, -upper_r, color=color, alpha=LENS_FILL_ALPHA, zorder=1)
+            # Usa etichetta unica per ogni lente per evitare sovrascrittura nella legenda
+            mat_label = f"Lente {idx+1}"
+            if mat_label not in seen_materials:
+                fill_front = ax.fill(upper_z, upper_r, color=color, alpha=LENS_FILL_ALPHA, zorder=3, label=mat_label)
+                fill_back = ax.fill(upper_z, -upper_r, color=color, alpha=LENS_FILL_ALPHA, zorder=3)
+                handles.append(fill_front[0])
+                labels.append(mat_label)
+                seen_materials.add(mat_label)
+        # Add legend for lens fills if there are any
+        if handles:
+            ax.legend(handles, labels, loc="best", fontsize=8)
 
     # ── Event handlers ─────────────────────────────────────────────────────────
     def _on_scroll(self, event):
@@ -1681,13 +1680,27 @@ class OpenTIRApp(ctk.CTk):
             return
         try:
             with PdfPages(path) as pdf:
-                # Save each tab's figure
+                # Save each tab's figure with white background
                 for fig, title in [
                     (self.fig_illum, "Illuminamento"),
                     (self.fig_iso, "Distribuzione"),
                     (self.fig_iso_detail, "Isofote"),
                     (self.fig_lee, "LEE Breakdown")
                 ]:
+                    # Imposta sfondo bianco per la figura e gli assi
+                    fig.set_facecolor("white")
+                    for ax in fig.axes:
+                        ax.set_facecolor("white")
+                        # Imposta colore nero per etichette e tick
+                        ax.tick_params(colors="black")
+                        for label in ax.get_xticklabels() + ax.get_yticklabels():
+                            label.set_color("black")
+                        for spine in ax.spines.values():
+                            spine.set_edgecolor("black")
+                        # Imposta colore nero per le etichette degli assi
+                        ax.xaxis.label.set_color("black")
+                        ax.yaxis.label.set_color("black")
+                        ax.title.set_color("black")
                     pdf.savefig(fig, bbox_inches='tight')
             messagebox.showinfo("Esportato", f"Risultati salvati in:\n{path}")
         except Exception as exc:
@@ -1730,7 +1743,7 @@ class OpenTIRApp(ctk.CTk):
         try:
             with PdfPages(path) as pdf:
                 # Page 1: System layout with lens description
-                fig_system = Figure(figsize=(8.5, 11), facecolor="white", dpi=100)
+                fig_system = Figure(figsize=(8.27, 11.69), facecolor="white", dpi=100)  # A4 size
                 ax_sys = fig_system.add_subplot(1, 1, 1)
                 ax_sys.set_facecolor("white")
                 
@@ -1757,14 +1770,27 @@ class OpenTIRApp(ctk.CTk):
                 
                 pdf.savefig(fig_system, bbox_inches='tight')
                 
-                # Pages 2-6: The 5 analysis tabs
+                # Pages 2-6: The 5 analysis tabs - all with white background
                 for fig, title in [
                     (self.fig_illum, "Illuminamento"),
                     (self.fig_iso, "Distribuzione"),
-                    (self.fig_iso_preview, "Isofote Preview"),
                     (self.fig_iso_detail, "Isofote"),
                     (self.fig_lee, "LEE Breakdown")
                 ]:
+                    # Imposta sfondo bianco per la figura e gli assi
+                    fig.set_facecolor("white")
+                    for ax in fig.axes:
+                        ax.set_facecolor("white")
+                        # Imposta colore nero per etichette e tick
+                        ax.tick_params(colors="black")
+                        for label in ax.get_xticklabels() + ax.get_yticklabels():
+                            label.set_color("black")
+                        for spine in ax.spines.values():
+                            spine.set_edgecolor("black")
+                        # Imposta colore nero per le etichette degli assi
+                        ax.xaxis.label.set_color("black")
+                        ax.yaxis.label.set_color("black")
+                        ax.title.set_color("black")
                     pdf.savefig(fig, bbox_inches='tight')
                     
             messagebox.showinfo("Esportato", f"Report completo salvato in:\n{path}")
@@ -1789,13 +1815,18 @@ class OpenTIRApp(ctk.CTk):
         win.title("Isofote – distribuzione di illuminamento")
         win.geometry("700x600")
 
-        fig_iso = Figure(figsize=(7, 5.5), facecolor="#1e1e1e", dpi=100)
-        ax_iso = fig_iso.add_subplot(1, 1, 1)
-        ax_iso.set_facecolor("#252526")
-        ax_iso.tick_params(colors="white")
-        ax_iso.xaxis.label.set_color("white")
-        ax_iso.yaxis.label.set_color("white")
-        ax_iso.title.set_color("white")
+        fig_iso = Figure(figsize=(8.27, 11.69), facecolor="white", dpi=100)  # A4 size at 100 dpi
+        
+        # Create two subplots: one for the plot, one for the colorbar below
+        gs = fig_iso.add_gridspec(2, 1, height_ratios=[10, 1], hspace=0.1)
+        ax_iso = fig_iso.add_subplot(gs[0])
+        ax_cbar = fig_iso.add_subplot(gs[1])
+        
+        ax_iso.set_facecolor("white")
+        ax_iso.tick_params(colors="black")
+        ax_iso.xaxis.label.set_color("black")
+        ax_iso.yaxis.label.set_color("black")
+        ax_iso.title.set_color("black")
 
         n_az = 64
         thetas = np.linspace(0, 2 * np.pi, n_az, endpoint=False)
@@ -1820,14 +1851,15 @@ class OpenTIRApp(ctk.CTk):
         XX, YY = np.meshgrid(xc, yc)
         ZZ = gaussian_filter(H.T, sigma=1.5)
 
-        cf = ax_iso.contourf(XX, YY, ZZ, levels=12, cmap="inferno")
-        cs = ax_iso.contour(XX, YY, ZZ, levels=12, colors="white", linewidths=0.5, alpha=0.6)
-        ax_iso.clabel(cs, inline=True, fontsize=7, fmt=lambda v: f"{v:.2e}", colors="white")
+        cf = ax_iso.contourf(XX, YY, ZZ, levels=20, cmap="inferno")
+        cs = ax_iso.contour(XX, YY, ZZ, levels=12, colors="black", linewidths=0.5, alpha=0.8)
+        ax_iso.clabel(cs, inline=True, fontsize=7, fmt=lambda v: f"{v:.2e}", colors="black")
 
-        fig_iso.colorbar(cf, ax=ax_iso, pad=0.02).set_label("Illuminamento [a.u.]", color="white")
-        ax_iso.set_xlabel("x [mm]", color="white")
-        ax_iso.set_ylabel("y [mm]", color="white")
-        ax_iso.set_title("Isofote", color="white")
+        # No colorbar - only labels on the plot
+
+        ax_iso.set_xlabel("x [mm]", color="black")
+        ax_iso.set_ylabel("y [mm]", color="black")
+        ax_iso.set_title("Isofote", color="black")
         ax_iso.set_aspect("equal")
 
         canvas_iso = FigureCanvasTkAgg(fig_iso, master=win)
@@ -1849,7 +1881,7 @@ class OpenTIRApp(ctk.CTk):
         win.title("LEE Breakdown")
         win.geometry("700x500")
 
-        fig_lee = Figure(figsize=(7, 4.5), facecolor="#1e1e1e", dpi=100)
+        fig_lee = Figure(figsize=(8.27, 11.69), facecolor="#1e1e1e", dpi=100)  # A4 size
         ax_pie = fig_lee.add_subplot(1, 2, 1)
         ax_bar = fig_lee.add_subplot(1, 2, 2)
         ax_pie.set_facecolor("#252526")

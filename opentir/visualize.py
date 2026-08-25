@@ -79,13 +79,35 @@ def plot_system(system, traces=None, ax=None, show_axis=True,
     if ax is None:
         _, ax = plt.subplots(figsize=(8, 6))
 
-    # Build a map: surface name → colour (first occurrence wins so that
-    # multi-segment profiles that share a name get the same colour)
-    name_to_color = {}
+    # Build a map: surface type → colour
+    # Surfaces are grouped by their generic type (fronte, retro, target, mirror, etc.)
+    # so that all surfaces of the same type share the same color
+    type_to_color = {}
     color_idx = 0
+    
+    # Pre-assign colors to known types for consistency
+    predefined_types = ["fronte", "retro", "target", "mirror", "block"]
+    for ptype in predefined_types:
+        type_to_color[ptype] = _surf_color(color_idx)
+        color_idx += 1
+    
     for surf in system.surfaces:
-        if surf.name not in name_to_color:
-            name_to_color[surf.name] = _surf_color(color_idx)
+        # Extract type from surface name (e.g., "lente1_fronte" -> "fronte")
+        kind = surf.kind.lower() if surf.kind else ""
+        
+        # For refract surfaces, try to extract fronte/retro from name
+        if kind == "refract":
+            if "_fronte" in surf.name.lower():
+                surf_type = "fronte"
+            elif "_retro" in surf.name.lower():
+                surf_type = "retro"
+            else:
+                surf_type = "refract"
+        else:
+            surf_type = kind
+        
+        if surf_type not in type_to_color:
+            type_to_color[surf_type] = _surf_color(color_idx)
             color_idx += 1
 
     # Track which generic labels have been shown
@@ -95,7 +117,8 @@ def plot_system(system, traces=None, ax=None, show_axis=True,
         "retro": "Retro",
         "target": "Target",
         "mirror": "Specchio",
-        "refraction": "Rifrazione",
+        "refract": "Rifrazione",
+        "block": "Blocco",
         "schermo": "Schermo"
     }
 
@@ -147,11 +170,23 @@ def plot_system(system, traces=None, ax=None, show_axis=True,
     # Second: draw surfaces (foreground, zorder=3)
     for surf in system.surfaces:
         pts   = surf.geometry.sample_points()
-        color = name_to_color[surf.name]
         
-        # Use generic label based on surface kind
+        # Get color based on surface type
         kind = surf.kind.lower() if surf.kind else ""
-        generic_label = label_map.get(kind, None)
+        if kind == "refract":
+            if "_fronte" in surf.name.lower():
+                surf_type = "fronte"
+            elif "_retro" in surf.name.lower():
+                surf_type = "retro"
+            else:
+                surf_type = "refract"
+        else:
+            surf_type = kind
+        
+        color = type_to_color.get(surf_type, _surf_color(0))
+        
+        # Use generic label based on surface type
+        generic_label = label_map.get(surf_type, None)
         label = generic_label if (generic_label and generic_label not in seen_labels) else None
         if generic_label:
             seen_labels.add(generic_label)

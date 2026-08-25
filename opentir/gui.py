@@ -1474,7 +1474,7 @@ class OpenTIRApp(ctk.CTk):
                 self.ax_iso_detail.set_xlabel("x [mm]", color="white")
                 self.ax_iso_detail.set_ylabel("y [mm]", color="white")
                 self.ax_iso_detail.set_aspect("equal")
-                self.fig_iso_detail.colorbar(cf2, ax=self.ax_iso_detail, pad=0.02).set_label("Illuminamento [a.u.]", color="white")
+                # No colorbar - only labels on the plot
 
         self.figure.tight_layout(pad=1.5)
         self.canvas.draw_idle()
@@ -1852,13 +1852,8 @@ class OpenTIRApp(ctk.CTk):
         cs = ax_iso.contour(XX, YY, ZZ, levels=12, colors="black", linewidths=0.5, alpha=0.8)
         ax_iso.clabel(cs, inline=True, fontsize=7, fmt=lambda v: f"{v:.2e}", colors="black")
 
-        # Horizontal colorbar below the plot
-        fig_iso.colorbar(cf, cax=ax_cbar, orientation="horizontal")
-        ax_cbar.set_xlabel("Illuminamento [a.u.]", color="black")
-        ax_cbar.tick_params(colors="black")
-        ax_cbar.xaxis.label.set_color("black")
-        ax_cbar.ticklabel_format(useOffset=False, style='sci', axis='x')
-        
+        # No colorbar - only labels on the plot
+
         ax_iso.set_xlabel("x [mm]", color="black")
         ax_iso.set_ylabel("y [mm]", color="black")
         ax_iso.set_title("Isofote", color="black")

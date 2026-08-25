@@ -1067,9 +1067,25 @@ class OpenTIRApp(ctk.CTk):
         main_frame = ctk.CTkFrame(parent, fg_color="transparent")
         main_frame.pack(fill="both", expand=True, padx=8, pady=8)
         
+        # Export buttons SOPRA i tab - visibili subito
+        exp_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+        exp_frame.pack(fill="x", expand=False, padx=0, pady=(0, 4))
+        
+        btn_save_all = _btn(exp_frame, "💾 Save Complete Report", self._save_complete_report, 
+                           width=160, fg_color="#2a5a8a")
+        btn_save_all.pack(side="left", padx=4, pady=4)
+        
+        btn_pdf = _btn(exp_frame, "📄 Save PDF (current)", self._save_results_pdf, 
+                      width=140, fg_color="#2a4a6a")
+        btn_pdf.pack(side="left", padx=4, pady=4)
+        
+        btn_png = _btn(exp_frame, "🖼 Save PNG (current)", self._save_results_png, 
+                      width=140, fg_color="#3a5a3a")
+        btn_png.pack(side="left", padx=4, pady=4)
+        
         # Tab widget per i 4 grafici
         self.analysis_tabs = ctk.CTkTabview(main_frame)
-        self.analysis_tabs.pack(fill="both", expand=True, padx=0, pady=(0, 8))
+        self.analysis_tabs.pack(fill="both", expand=True, padx=0, pady=(4, 0))
         
         # Tab 1: Illuminamento
         tab_illum = self.analysis_tabs.add("Illuminamento")
@@ -1106,22 +1122,6 @@ class OpenTIRApp(ctk.CTk):
         self.ax_lee.set_title("LEE Breakdown")
         self.canvas_lee = FigureCanvasTkAgg(self.fig_lee, master=tab_lee)
         self.canvas_lee.get_tk_widget().pack(fill="both", expand=True, padx=4, pady=4)
-        
-        # Export buttons sotto i tab - frame separato con fill=x per assicurare visibilità
-        exp_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
-        exp_frame.pack(fill="x", expand=False, padx=0, pady=(0, 4))
-        
-        btn_save_all = _btn(exp_frame, "💾 Save Complete Report", self._save_complete_report, 
-                           width=160, fg_color="#2a5a8a")
-        btn_save_all.pack(side="left", padx=4, pady=4)
-        
-        btn_pdf = _btn(exp_frame, "📄 Save PDF (current)", self._save_results_pdf, 
-                      width=140, fg_color="#2a4a6a")
-        btn_pdf.pack(side="left", padx=4, pady=4)
-        
-        btn_png = _btn(exp_frame, "🖼 Save PNG (current)", self._save_results_png, 
-                      width=140, fg_color="#3a5a3a")
-        btn_png.pack(side="left", padx=4, pady=4)
 
     def _style_ax(self, ax):
         ax.set_facecolor("#252526")
@@ -1492,15 +1492,18 @@ class OpenTIRApp(ctk.CTk):
             return
         handles = []
         labels = []
-        for f_pts, r_pts, color in self._lens_fill_data:
+        seen_materials = set()
+        for idx, (f_pts, r_pts, color) in enumerate(self._lens_fill_data):
             upper_z = np.concatenate([f_pts[:, 0], r_pts[::-1, 0]])
             upper_r = np.concatenate([f_pts[:, 1], r_pts[::-1, 1]])
-            fill_front = ax.fill(upper_z, upper_r, color=color, alpha=LENS_FILL_ALPHA, zorder=3, label="Fronte lente")
-            fill_back = ax.fill(upper_z, -upper_r, color=color, alpha=LENS_FILL_ALPHA, zorder=3, label="Retro lente")
-            handles.append(fill_front[0])
-            labels.append("Fronte")
-            handles.append(fill_back[0])
-            labels.append("Retro")
+            # Usa etichetta unica per ogni lente per evitare sovrascrittura nella legenda
+            mat_label = f"Lente {idx+1}"
+            if mat_label not in seen_materials:
+                fill_front = ax.fill(upper_z, upper_r, color=color, alpha=LENS_FILL_ALPHA, zorder=3, label=mat_label)
+                fill_back = ax.fill(upper_z, -upper_r, color=color, alpha=LENS_FILL_ALPHA, zorder=3)
+                handles.append(fill_front[0])
+                labels.append(mat_label)
+                seen_materials.add(mat_label)
         # Add legend for lens fills if there are any
         if handles:
             ax.legend(handles, labels, loc="best", fontsize=8)

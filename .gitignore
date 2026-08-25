@@ -10,10 +10,9 @@ build/
 dist/
 *.egg-info/
 
-# Logs
-*.log
-
 # Environment
+.venv/
+venv/
 .env
 .env.local
 *.env.*
@@ -24,10 +23,8 @@ dist/
 *.swp
 *.swo
 
-# Dependencies
-.venv/
-venv/
-node_modules/
+# Logs
+*.log
 
 # Coverage
 .coverage

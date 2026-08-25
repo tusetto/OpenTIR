@@ -99,27 +99,7 @@ def plot_system(system, traces=None, ax=None, show_axis=True,
         "schermo": "Schermo"
     }
 
-    for surf in system.surfaces:
-        pts   = surf.geometry.sample_points()
-        color = name_to_color[surf.name]
-        
-        # Use generic label based on surface kind
-        kind = surf.kind.lower() if surf.kind else ""
-        generic_label = label_map.get(kind, None)
-        label = generic_label if (generic_label and generic_label not in seen_labels) else None
-        if generic_label:
-            seen_labels.add(generic_label)
-
-        # — outer edge (solid) —
-        ax.plot(pts[:, 0], pts[:, 1],
-                color=color, linewidth=2.0, alpha=1.0,
-                label=label, solid_capstyle="round")
-
-        # — symmetric mirror below axis —
-        if symmetric and surf.kind != "target":
-            ax.plot(pts[:, 0], -pts[:, 1],
-                    color=color, linewidth=2.0, linestyle="--", alpha=0.45)
-
+    # First: draw rays (background, zorder=1)
     if traces:
         # Compute max power for linewidth scaling
         max_power = max((t.get("power", 1.0) for t in traces), default=1.0)
@@ -159,10 +139,32 @@ def plot_system(system, traces=None, ax=None, show_axis=True,
                     total += seg_len
                 clipped = np.array(clipped)
                 ax.plot(clipped[:, 0], clipped[:, 1],
-                        color=color, linewidth=0.35, alpha=0.30, linestyle="--")
+                        color=color, linewidth=0.35, alpha=0.30, linestyle="--", zorder=1)
             else:
                 ax.plot(path[:, 0], path[:, 1],
-                        color=color, linewidth=lw, alpha=0.80)
+                        color=color, linewidth=lw, alpha=0.80, zorder=1)
+
+    # Second: draw surfaces (foreground, zorder=3)
+    for surf in system.surfaces:
+        pts   = surf.geometry.sample_points()
+        color = name_to_color[surf.name]
+        
+        # Use generic label based on surface kind
+        kind = surf.kind.lower() if surf.kind else ""
+        generic_label = label_map.get(kind, None)
+        label = generic_label if (generic_label and generic_label not in seen_labels) else None
+        if generic_label:
+            seen_labels.add(generic_label)
+
+        # — outer edge (solid) —
+        ax.plot(pts[:, 0], pts[:, 1],
+                color=color, linewidth=2.0, alpha=1.0,
+                label=label, solid_capstyle="round", zorder=3)
+
+        # — symmetric mirror below axis —
+        if symmetric and surf.kind != "target":
+            ax.plot(pts[:, 0], -pts[:, 1],
+                    color=color, linewidth=2.0, linestyle="--", alpha=0.45, zorder=3)
 
     if show_axis:
         ax.axhline(0, color="gray", linestyle="--", linewidth=0.7)

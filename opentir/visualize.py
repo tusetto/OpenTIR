@@ -144,7 +144,7 @@ def plot_system(system, traces=None, ax=None, show_axis=True,
                 ax.plot(path[:, 0], path[:, 1],
                         color=color, linewidth=lw, alpha=0.80, zorder=1)
 
-    # Second: draw surfaces (foreground, zorder=2)
+    # Second: draw surfaces (foreground, zorder=3)
     for surf in system.surfaces:
         pts   = surf.geometry.sample_points()
         color = name_to_color[surf.name]
@@ -159,12 +159,12 @@ def plot_system(system, traces=None, ax=None, show_axis=True,
         # — outer edge (solid) —
         ax.plot(pts[:, 0], pts[:, 1],
                 color=color, linewidth=2.0, alpha=1.0,
-                label=label, solid_capstyle="round", zorder=2)
+                label=label, solid_capstyle="round", zorder=3)
 
         # — symmetric mirror below axis —
         if symmetric and surf.kind != "target":
             ax.plot(pts[:, 0], -pts[:, 1],
-                    color=color, linewidth=2.0, linestyle="--", alpha=0.45, zorder=2)
+                    color=color, linewidth=2.0, linestyle="--", alpha=0.45, zorder=3)
 
     if show_axis:
         ax.axhline(0, color="gray", linestyle="--", linewidth=0.7)

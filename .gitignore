@@ -1,1 +1,24 @@
-Nothing should be ignored based on the provided file changes. The modification of 'opentir/gui.py' is a source code file that should not be added to .gitignore.
+```
+# Compiled Python files
+*.pyc
+__pycache__/
+
+# Dependencies
+.venv/
+venv/
+node_modules/
+
+# Logs and temp files
+*.log
+*.tmp
+*.swp
+
+# Environment
+.env
+.env.local
+*.env.*
+
+# Editors
+.vscode/
+.idea/
+```

@@ -1813,7 +1813,12 @@ class OpenTIRApp(ctk.CTk):
         win.geometry("700x600")
 
         fig_iso = Figure(figsize=(8.27, 11.69), facecolor="white", dpi=100)  # A4 size at 100 dpi
-        ax_iso = fig_iso.add_subplot(1, 1, 1)
+        
+        # Create two subplots: one for the plot, one for the colorbar below
+        gs = fig_iso.add_gridspec(2, 1, height_ratios=[10, 1], hspace=0.1)
+        ax_iso = fig_iso.add_subplot(gs[0])
+        ax_cbar = fig_iso.add_subplot(gs[1])
+        
         ax_iso.set_facecolor("white")
         ax_iso.tick_params(colors="black")
         ax_iso.xaxis.label.set_color("black")
@@ -1847,10 +1852,12 @@ class OpenTIRApp(ctk.CTk):
         cs = ax_iso.contour(XX, YY, ZZ, levels=12, colors="black", linewidths=0.5, alpha=0.8)
         ax_iso.clabel(cs, inline=True, fontsize=7, fmt=lambda v: f"{v:.2e}", colors="black")
 
-        # Single colorbar with controlled position
-        cbar = fig_iso.colorbar(cf, ax=ax_iso, pad=0.02, shrink=0.8)
-        cbar.set_label("Illuminamento [a.u.]", color="black")
-        cbar.ax.tick_params(colors="black")
+        # Horizontal colorbar below the plot
+        fig_iso.colorbar(cf, cax=ax_cbar, orientation="horizontal")
+        ax_cbar.set_xlabel("Illuminamento [a.u.]", color="black")
+        ax_cbar.tick_params(colors="black")
+        ax_cbar.xaxis.label.set_color("black")
+        ax_cbar.ticklabel_format(useOffset=False, style='sci', axis='x')
         
         ax_iso.set_xlabel("x [mm]", color="black")
         ax_iso.set_ylabel("y [mm]", color="black")

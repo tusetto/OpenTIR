@@ -54,9 +54,10 @@ MATERIAL_PRESETS = {
     "Personalizzato...":      None,
 }
 
-SURFACE_KINDS = ["mirror", "target", "block", "refract"]
+SURFACE_KINDS = ["mirror", "target", "block", "refract", "source"]
 GEOM_TYPES    = ["segment", "arc", "conic", "freeform"]
 DISTRIBUTIONS = ["lambertian", "uniform"]
+PROFILE_TYPES = ["rotoassiale", "lineare"]
 
 MATERIAL_FILL_COLOR = {
     "Aria (n=1.00)":           "#888888",
@@ -428,7 +429,7 @@ class SurfaceForm(ctk.CTkToplevel):
     def __init__(self, master, on_save, surf_def=None):
         super().__init__(master)
         self.title("Definizione superficie")
-        self.geometry("700x500")
+        self.geometry("700x550")
         self.resizable(False, False)
         self.grab_set()
         self.on_save = on_save
@@ -436,6 +437,7 @@ class SurfaceForm(ctk.CTkToplevel):
         self.name_var = tk.StringVar(value="superficie1")
         self.kind_var = tk.StringVar(value="mirror")
         self.geom_var = tk.StringVar(value="segment")
+        self.profile_type_var = tk.StringVar(value="rotoassiale")
 
         self.seg_vars = {k: tk.StringVar(value=v) for k, v in
                          [("z1","0.0"),("r1","-10.0"),("z2","10.0"),("r2","10.0")]}
@@ -475,6 +477,10 @@ class SurfaceForm(ctk.CTkToplevel):
         _lbl(top, "Geometria").grid(row=0, column=4, **pad, sticky="w")
         _combo(top, self.geom_var, GEOM_TYPES, width=120,
                command=lambda v: self._update_geom()).grid(row=0, column=5, **pad)
+
+        # Aggiungi selettore tipo profilo (rotoassiale/lineare)
+        _lbl(top, "Profilo").grid(row=1, column=0, **pad, sticky="w")
+        _combo(top, self.profile_type_var, PROFILE_TYPES, width=120).grid(row=1, column=1, **pad)
 
         self.geom_frame = ctk.CTkFrame(self, fg_color=BG_CARD, corner_radius=8)
         self.geom_frame.pack(fill="x", padx=10, pady=4)
@@ -527,14 +533,21 @@ class SurfaceForm(ctk.CTkToplevel):
     def _update_material(self, *_):
         for w in self.mat_frame.winfo_children():
             w.destroy()
-        if self.kind_var.get() != "refract":
+        if self.kind_var.get() not in ("refract", "source"):
             return
         pad = {"padx": 10, "pady": 4}
-        _lbl(self.mat_frame, "Materiale interno", font=FONT_BOLD).grid(row=0, column=0, **pad, sticky="w")
-        _lbl(self.mat_frame, "Materiale esterno", font=FONT_BOLD).grid(row=0, column=2, **pad, sticky="w")
-        mat_names = [k for k in MATERIAL_PRESETS if k != "Personalizzato..."]
-        _combo(self.mat_frame, self.mat_in_var, mat_names, width=180).grid(row=1, column=0, **pad)
-        _combo(self.mat_frame, self.mat_out_var, mat_names, width=180).grid(row=1, column=2, **pad)
+        
+        # Per le sorgenti luminose, mostriamo solo il materiale del mezzo di emissione
+        if self.kind_var.get() == "source":
+            _lbl(self.mat_frame, "Mezzo di emissione", font=FONT_BOLD).grid(row=0, column=0, **pad, sticky="w")
+            mat_names = [k for k in MATERIAL_PRESETS if k != "Personalizzato..."]
+            _combo(self.mat_frame, self.mat_out_var, mat_names, width=180).grid(row=1, column=0, **pad)
+        else:
+            _lbl(self.mat_frame, "Materiale interno", font=FONT_BOLD).grid(row=0, column=0, **pad, sticky="w")
+            _lbl(self.mat_frame, "Materiale esterno", font=FONT_BOLD).grid(row=0, column=2, **pad, sticky="w")
+            mat_names = [k for k in MATERIAL_PRESETS if k != "Personalizzato..."]
+            _combo(self.mat_frame, self.mat_in_var, mat_names, width=180).grid(row=1, column=0, **pad)
+            _combo(self.mat_frame, self.mat_out_var, mat_names, width=180).grid(row=1, column=2, **pad)
 
     def _save(self):
         try:
@@ -542,6 +555,7 @@ class SurfaceForm(ctk.CTkToplevel):
                 "name": self.name_var.get(),
                 "kind": self.kind_var.get(),
                 "geom_type": self.geom_var.get(),
+                "profile_type": self.profile_type_var.get(),
             }
             gt = self.geom_var.get()
             if gt == "segment":
@@ -568,6 +582,14 @@ class SurfaceForm(ctk.CTkToplevel):
             if self.kind_var.get() == "refract":
                 surf_def["material_in"] = self.mat_in_var.get()
                 surf_def["material_out"] = self.mat_out_var.get()
+            elif self.kind_var.get() == "source":
+                # Per le sorgenti, salviamo solo il mezzo di emissione
+                surf_def["medium"] = self.mat_out_var.get()
+                # Aggiungiamo i parametri specifici per la sorgente
+                surf_def["axis_deg"] = 0.0  # default, può essere modificato
+                surf_def["half_angle_deg"] = 60.0
+                surf_def["n_rays"] = 81
+                surf_def["distribution"] = "lambertian"
 
             self.on_save(surf_def)
             self.destroy()
@@ -578,6 +600,7 @@ class SurfaceForm(ctk.CTkToplevel):
         self.name_var.set(surf_def.get("name", "superficie1"))
         self.kind_var.set(surf_def.get("kind", "mirror"))
         self.geom_var.set(surf_def.get("geom_type", "segment"))
+        self.profile_type_var.set(surf_def.get("profile_type", "rotoassiale"))
         if "p1" in surf_def:
             self.seg_vars["z1"].set(str(surf_def["p1"][0]))
             self.seg_vars["r1"].set(str(surf_def["p1"][1]))

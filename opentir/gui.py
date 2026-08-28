@@ -483,9 +483,9 @@ class SurfaceForm(ctk.CTkToplevel):
         _combo(top, self.geom_var, GEOM_TYPES, width=120,
                command=lambda v: self._update_geom()).grid(row=0, column=5, **pad)
 
-        # Aggiungi selettore tipo profilo (rotoassiale/lineare) in una nuova riga
-        _lbl(top, "Profilo").grid(row=1, column=0, **pad, sticky="w")
-        _combo(top, self.profile_type_var, PROFILE_TYPES, width=160).grid(row=1, column=1, **pad, sticky="w")
+        # Aggiungi selettore tipo profilo (rotoassiale/lineare) nella stessa riga
+        _lbl(top, "Profilo").grid(row=0, column=6, **pad, sticky="w")
+        _combo(top, self.profile_type_var, PROFILE_TYPES, width=140).grid(row=0, column=7, **pad, sticky="w")
 
         self.geom_frame = ctk.CTkFrame(self, fg_color=BG_CARD, corner_radius=8)
         self.geom_frame.pack(fill="x", padx=10, pady=4)

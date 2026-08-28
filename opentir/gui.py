@@ -1032,6 +1032,10 @@ class OpenTIRApp(ctk.CTk):
              fg_color="#2a8a2a", hover_color="#3aaa3a").pack(side="left", padx=6)
         _btn(top_bar, " Reset vista", self._reset_view, width=110,
              fg_color="gray30", hover_color="gray40").pack(side="left", padx=4)
+        
+        # Stats label
+        self.stats_label = ctk.CTkLabel(top_bar, text="", font=FONT_SMALL, text_color="#58a6ff")
+        self.stats_label.pack(side="left", padx=20)
 
         # Main content area
         main_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -1997,6 +2001,7 @@ class OpenTIRApp(ctk.CTk):
 
 
 def main():
+    print("DEBUG: Versione aggiornata caricata")
     app = OpenTIRApp()
     app.mainloop()
 

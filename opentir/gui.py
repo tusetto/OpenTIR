@@ -54,9 +54,10 @@ MATERIAL_PRESETS = {
     "Personalizzato...":      None,
 }
 
-SURFACE_KINDS = ["mirror", "target", "block", "refract"]
+SURFACE_KINDS = ["mirror", "target", "block", "refract", "source"]
 GEOM_TYPES    = ["segment", "arc", "conic", "freeform"]
 DISTRIBUTIONS = ["lambertian", "uniform"]
+PROFILE_TYPES = ["rotoassiale", "lineare"]
 
 MATERIAL_FILL_COLOR = {
     "Aria (n=1.00)":           "#888888",
@@ -118,6 +119,7 @@ def build_lens_surface_defs(lens_def):
     origin_z = float(lens_def["origin_z"])
     t_edge   = float(lens_def["t_edge"])
     n_pts    = int(lens_def.get("n_points", 80))
+    profile_type = lens_def.get("profile_type", "rotoassiale")
 
     fg = dict(lens_def["fronte_geom"])
     fg["geom_type"] = fg.get("geom_type", "conic")
@@ -180,6 +182,7 @@ def build_lens_surface_defs(lens_def):
         "name":         f"{lens_def['name']}_fronte",
         "kind":         "refract",
         "geom_type":    fg["geom_type"],
+        "profile_type": profile_type,
         "material_in":  "Aria (n=1.00)",
         "material_out": mat_name,
         "origin_r":     origin_r,
@@ -191,6 +194,7 @@ def build_lens_surface_defs(lens_def):
         "name":         f"{lens_def['name']}_retro",
         "kind":         "refract",
         "geom_type":    rg["geom_type"],
+        "profile_type": profile_type,
         "material_in":  mat_name,
         "material_out": "Aria (n=1.00)",
         "origin_r":     origin_r,
@@ -366,6 +370,7 @@ class LensForm(ctk.CTkToplevel):
             "r_max":       float(self.r_max.get()),
             "t_edge":      float(self.t_edge.get()),
             "n_points":    int(self.n_points.get()),
+            "profile_type": self.profile_type_var.get(),
             "fronte_geom": self._make_geom_dict(
                 self.f_geom, self.f_R, self.f_k, self.f_A4, self.f_A6),
             "retro_geom":  self._make_geom_dict(
@@ -396,6 +401,7 @@ class LensForm(ctk.CTkToplevel):
         self.r_max.set(str(lens_def.get("r_max", 10.0)))
         self.t_edge.set(str(lens_def.get("t_edge", 1.0)))
         self.n_points.set(str(lens_def.get("n_points", 80)))
+        self.profile_type_var.set(lens_def.get("profile_type", "rotoassiale"))
         fg = lens_def.get("fronte_geom", {})
         self.f_geom.set(fg.get("geom_type", "conic"))
         f_R_val = fg.get("R", 0)
@@ -428,7 +434,7 @@ class SurfaceForm(ctk.CTkToplevel):
     def __init__(self, master, on_save, surf_def=None):
         super().__init__(master)
         self.title("Definizione superficie")
-        self.geometry("700x500")
+        self.geometry("700x550")
         self.resizable(False, False)
         self.grab_set()
         self.on_save = on_save
@@ -436,6 +442,7 @@ class SurfaceForm(ctk.CTkToplevel):
         self.name_var = tk.StringVar(value="superficie1")
         self.kind_var = tk.StringVar(value="mirror")
         self.geom_var = tk.StringVar(value="segment")
+        self.profile_type_var = tk.StringVar(value="rotoassiale")
 
         self.seg_vars = {k: tk.StringVar(value=v) for k, v in
                          [("z1","0.0"),("r1","-10.0"),("z2","10.0"),("r2","10.0")]}
@@ -475,6 +482,10 @@ class SurfaceForm(ctk.CTkToplevel):
         _lbl(top, "Geometria").grid(row=0, column=4, **pad, sticky="w")
         _combo(top, self.geom_var, GEOM_TYPES, width=120,
                command=lambda v: self._update_geom()).grid(row=0, column=5, **pad)
+
+        # Aggiungi selettore tipo profilo (rotoassiale/lineare)
+        _lbl(top, "Profilo").grid(row=1, column=0, **pad, sticky="w")
+        _combo(top, self.profile_type_var, PROFILE_TYPES, width=120).grid(row=1, column=1, **pad)
 
         self.geom_frame = ctk.CTkFrame(self, fg_color=BG_CARD, corner_radius=8)
         self.geom_frame.pack(fill="x", padx=10, pady=4)
@@ -527,14 +538,21 @@ class SurfaceForm(ctk.CTkToplevel):
     def _update_material(self, *_):
         for w in self.mat_frame.winfo_children():
             w.destroy()
-        if self.kind_var.get() != "refract":
+        if self.kind_var.get() not in ("refract", "source"):
             return
         pad = {"padx": 10, "pady": 4}
-        _lbl(self.mat_frame, "Materiale interno", font=FONT_BOLD).grid(row=0, column=0, **pad, sticky="w")
-        _lbl(self.mat_frame, "Materiale esterno", font=FONT_BOLD).grid(row=0, column=2, **pad, sticky="w")
-        mat_names = [k for k in MATERIAL_PRESETS if k != "Personalizzato..."]
-        _combo(self.mat_frame, self.mat_in_var, mat_names, width=180).grid(row=1, column=0, **pad)
-        _combo(self.mat_frame, self.mat_out_var, mat_names, width=180).grid(row=1, column=2, **pad)
+        
+        # Per le sorgenti luminose, mostriamo solo il materiale del mezzo di emissione
+        if self.kind_var.get() == "source":
+            _lbl(self.mat_frame, "Mezzo di emissione", font=FONT_BOLD).grid(row=0, column=0, **pad, sticky="w")
+            mat_names = [k for k in MATERIAL_PRESETS if k != "Personalizzato..."]
+            _combo(self.mat_frame, self.mat_out_var, mat_names, width=180).grid(row=1, column=0, **pad)
+        else:
+            _lbl(self.mat_frame, "Materiale interno", font=FONT_BOLD).grid(row=0, column=0, **pad, sticky="w")
+            _lbl(self.mat_frame, "Materiale esterno", font=FONT_BOLD).grid(row=0, column=2, **pad, sticky="w")
+            mat_names = [k for k in MATERIAL_PRESETS if k != "Personalizzato..."]
+            _combo(self.mat_frame, self.mat_in_var, mat_names, width=180).grid(row=1, column=0, **pad)
+            _combo(self.mat_frame, self.mat_out_var, mat_names, width=180).grid(row=1, column=2, **pad)
 
     def _save(self):
         try:
@@ -542,6 +560,7 @@ class SurfaceForm(ctk.CTkToplevel):
                 "name": self.name_var.get(),
                 "kind": self.kind_var.get(),
                 "geom_type": self.geom_var.get(),
+                "profile_type": self.profile_type_var.get(),
             }
             gt = self.geom_var.get()
             if gt == "segment":
@@ -568,6 +587,14 @@ class SurfaceForm(ctk.CTkToplevel):
             if self.kind_var.get() == "refract":
                 surf_def["material_in"] = self.mat_in_var.get()
                 surf_def["material_out"] = self.mat_out_var.get()
+            elif self.kind_var.get() == "source":
+                # Per le sorgenti, salviamo solo il mezzo di emissione
+                surf_def["medium"] = self.mat_out_var.get()
+                # Aggiungiamo i parametri specifici per la sorgente
+                surf_def["axis_deg"] = 0.0  # default, può essere modificato
+                surf_def["half_angle_deg"] = 60.0
+                surf_def["n_rays"] = 81
+                surf_def["distribution"] = "lambertian"
 
             self.on_save(surf_def)
             self.destroy()
@@ -578,6 +605,7 @@ class SurfaceForm(ctk.CTkToplevel):
         self.name_var.set(surf_def.get("name", "superficie1"))
         self.kind_var.set(surf_def.get("kind", "mirror"))
         self.geom_var.set(surf_def.get("geom_type", "segment"))
+        self.profile_type_var.set(surf_def.get("profile_type", "rotoassiale"))
         if "p1" in surf_def:
             self.seg_vars["z1"].set(str(surf_def["p1"][0]))
             self.seg_vars["r1"].set(str(surf_def["p1"][1]))
@@ -861,8 +889,14 @@ def build_surface_objects(surf_def):
     if surf_def["kind"] == "refract":
         material_in  = _preset_or_custom(surf_def, "material_in")
         material_out = _preset_or_custom(surf_def, "material_out")
-
+    
+    # Per le sorgenti, usiamo il materiale del mezzo di emissione
+    if surf_def["kind"] == "source":
+        material_out = _preset_or_custom(surf_def, "medium")
+    
     gt = surf_def["geom_type"]
+    profile_type = surf_def.get("profile_type", "rotoassiale")
+    
     if gt == "segment":
         geom = Segment(surf_def["p1"], surf_def["p2"], name=surf_def["name"])
         return [Surface(geom, kind=surf_def["kind"], name=surf_def["name"],
@@ -880,25 +914,43 @@ def build_surface_objects(surf_def):
             r_max=surf_def["r_max"], coeffs=surf_def.get("coeffs", ()),
             n_points=surf_def.get("n_points", 80),
             flip_z=surf_def.get("flip_z", False))
-        _origin_r = surf_def.get("origin_r", 0.0)
-        _rot_deg  = surf_def.get("rotation_deg", 0.0)
-        points = np.vstack([pts_half[::-1] * [1, -1], pts_half[1:]])
-        if _origin_r != 0.0 or _rot_deg != 0.0:
-            _c, _s = np.cos(np.radians(_rot_deg)), np.sin(np.radians(_rot_deg))
-            pts_t = points.copy()
-            pts_t[:, 1] += _origin_r
-            zz, rr = pts_t[:, 0], pts_t[:, 1]
-            points = np.column_stack([zz * _c - rr * _s, zz * _s + rr * _c])
+        
+        if profile_type == "rotoassiale":
+            # Rivoluzione attorno all'asse Z: crea superficie completa simmetrica
+            _origin_r = surf_def.get("origin_r", 0.0)
+            _rot_deg  = surf_def.get("rotation_deg", 0.0)
+            points = np.vstack([pts_half[::-1] * [1, -1], pts_half[1:]])
+            if _origin_r != 0.0 or _rot_deg != 0.0:
+                _c, _s = np.cos(np.radians(_rot_deg)), np.sin(np.radians(_rot_deg))
+                pts_t = points.copy()
+                pts_t[:, 1] += _origin_r
+                zz, rr = pts_t[:, 0], pts_t[:, 1]
+                points = np.column_stack([zz * _c - rr * _s, zz * _s + rr * _c])
+        else:
+            # Lineare: estrusione lungo Y per 100mm (da -50 a +50)
+            # Mantieni solo il profilo superiore (r >= 0) e applica offset/rotazione se presenti
+            _origin_r = surf_def.get("origin_r", 0.0)
+            _rot_deg  = surf_def.get("rotation_deg", 0.0)
+            points = pts_half.copy()
+            if _origin_r != 0.0 or _rot_deg != 0.0:
+                _c, _s = np.cos(np.radians(_rot_deg)), np.sin(np.radians(_rot_deg))
+                pts_t = points.copy()
+                pts_t[:, 1] += _origin_r
+                zz, rr = pts_t[:, 0], pts_t[:, 1]
+                points = np.column_stack([zz * _c - rr * _s, zz * _s + rr * _c])
+        
         outward = (1.0, 0.0) if surf_def.get("outward", "+z") == "+z" else (-1.0, 0.0)
         return profile_to_surfaces(points, kind=surf_def["kind"],
                                    material_in=material_in, material_out=material_out,
-                                   outward_direction=outward, name=surf_def["name"])
+                                   outward_direction=outward, name=surf_def["name"],
+                                   profile_type=profile_type)
     else:
         points = build_freeform_profile(surf_def["points"])
         outward = (1.0, 0.0) if surf_def.get("outward", "+z") == "+z" else (-1.0, 0.0)
         return profile_to_surfaces(points, kind=surf_def["kind"],
                                    material_in=material_in, material_out=material_out,
-                                   outward_direction=outward, name=surf_def["name"])
+                                   outward_direction=outward, name=surf_def["name"],
+                                   profile_type=surf_def.get("profile_type", "rotoassiale"))
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

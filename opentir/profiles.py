@@ -85,7 +85,7 @@ def build_freeform_profile(points):
 
 
 def profile_to_surfaces(points, kind="refract", material_in=None, material_out=None,
-                         outward_direction=(1.0, 0.0), name="surface"):
+                         outward_direction=(1.0, 0.0), name="surface", profile_type="rotoassiale"):
     """
     Convert a [z, r] point array (from build_conic_profile,
     build_freeform_profile, or any other source) into a list of
@@ -98,6 +98,9 @@ def profile_to_surfaces(points, kind="refract", material_in=None, material_out=N
         from the source in +z, the default (1,0) is usually right;
         use (-1,0) for a surface whose 'outer' (material_out) side
         faces -z instead.
+    
+    profile_type: "rotoassiale" o "lineare". Per profili lineari, la superficie
+        viene estrusa per 100mm lungo l'asse Y (perpendicolare al piano Z-R).
     """
     points = np.array(points, dtype=float)
     outward_direction = np.array(outward_direction, dtype=float)

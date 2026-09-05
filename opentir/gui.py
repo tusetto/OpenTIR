@@ -472,6 +472,7 @@ class SurfaceForm(ctk.CTkToplevel):
         top = ctk.CTkFrame(self, fg_color=BG_CARD, corner_radius=8)
         top.pack(fill="x", padx=10, pady=10)
 
+        # Riga 0: Nome e Tipo
         _lbl(top, "Nome").grid(row=0, column=0, **pad, sticky="w")
         _entry(top, self.name_var, width=160).grid(row=0, column=1, **pad)
 
@@ -479,13 +480,13 @@ class SurfaceForm(ctk.CTkToplevel):
         _combo(top, self.kind_var, SURFACE_KINDS, width=120,
                command=lambda v: self._update_material()).grid(row=0, column=3, **pad)
 
-        _lbl(top, "Geometria").grid(row=0, column=4, **pad, sticky="w")
+        # Riga 1: Geometria e Profilo
+        _lbl(top, "Geometria").grid(row=1, column=0, **pad, sticky="w")
         _combo(top, self.geom_var, GEOM_TYPES, width=120,
-               command=lambda v: self._update_geom()).grid(row=0, column=5, **pad)
+               command=lambda v: self._update_geom()).grid(row=1, column=1, **pad)
 
-        # Aggiungi selettore tipo profilo (rotoassiale/lineare)
-        _lbl(top, "Profilo").grid(row=1, column=0, **pad, sticky="w")
-        _combo(top, self.profile_type_var, PROFILE_TYPES, width=120).grid(row=1, column=1, **pad)
+        _lbl(top, "Profilo").grid(row=1, column=2, **pad, sticky="w")
+        _combo(top, self.profile_type_var, PROFILE_TYPES, width=140).grid(row=1, column=3, **pad, sticky="w")
 
         self.geom_frame = ctk.CTkFrame(self, fg_color=BG_CARD, corner_radius=8)
         self.geom_frame.pack(fill="x", padx=10, pady=4)
@@ -1032,6 +1033,10 @@ class OpenTIRApp(ctk.CTk):
              fg_color="#2a8a2a", hover_color="#3aaa3a").pack(side="left", padx=6)
         _btn(top_bar, " Reset vista", self._reset_view, width=110,
              fg_color="gray30", hover_color="gray40").pack(side="left", padx=4)
+        
+        # Stats label
+        self.stats_label = ctk.CTkLabel(top_bar, text="", font=FONT_SMALL, text_color="#58a6ff")
+        self.stats_label.pack(side="left", padx=20)
 
         # Main content area
         main_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -1997,6 +2002,7 @@ class OpenTIRApp(ctk.CTk):
 
 
 def main():
+    print("DEBUG: Versione aggiornata caricata")
     app = OpenTIRApp()
     app.mainloop()
 
